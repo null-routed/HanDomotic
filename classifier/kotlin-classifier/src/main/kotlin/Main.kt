@@ -7,6 +7,14 @@ import org.apache.commons.math3.stat.descriptive.moment.Kurtosis
 import org.apache.commons.math3.complex.Complex
 import org.apache.commons.math3.transform.*
 
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
+import android.content.Context
+import androidx.activity.ComponentActivity
+import java.nio.FloatBuffer
+
+
 @Serializable
 data class GestureData(
     val timestamps: List<String>,
@@ -86,6 +94,47 @@ fun FloatArray.zeroCrossings(): Int {
     return count
 }
 
+// This function computes the highest class probability given a confidence Array<FloatArray>
+fun computeMaxFloatArray(matrix: Array<FloatArray>) : Float{
+    var max : Float = 0.0f
+    for(row in matrix){
+        for (value in row){
+            if(value >= max){
+                max = value
+            }  
+        }
+    }
+}
+
+// This method performs a single prediction
+fun retrievePredictionAndConfidence(inputFeatures: FloatArray, numFeatures: Int, threshold: Float = 1.0f) : Pair<String, Float> {
+    
+    // Creating an ortEnvironment
+    ortEnvironment = OrtEnvironment.getEnvironment()
+    val ortSession = createORTSession(ortEnvironment)
+
+    val inputName = ortSession.inputNames?.iterator()?.next()
+    val floatInputs = FloatBuffer.wrap(inputFeatures)
+
+    // Creating an input tensor with numFeatures features as shape
+    val inputTensor = OnnxTensor.createTensor(ortEnvironment, floatInputs, longArrayOf(1, numFeatures))
+
+    // Running the model
+    val results = ortSession.run(mapOf(inputName to inputTensor))
+    val confidenceMatrix = results[1].values as Array<FloatArray>
+    val confidence = computeMaxFloatArray(confidenceMatrix)
+    val predictionVector = results[0].values as Array<String>
+
+    val lateinit prediction : String
+    if(confidence < threshold){
+        prediction = "No Gesture"
+    } else {
+        prediction = predictionVector[0]
+    }
+
+    return prediction, confidence
+}
+
 fun main() {
     // Load data
     val gestureData = loadData("labeled_train_data/labeled_data_circle.json")
@@ -101,4 +150,8 @@ fun main() {
         println("Y-axis: $yFeatures")
         println("Z-axis: $zFeatures")
     }
+
+    // Merging the arrays of the features for each axis in a single array
+    val allFeatures = xFeatures + yFeatures + zFeatures
+    println("All-features: $allFeatures")
 }
