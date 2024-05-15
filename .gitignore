@@ -34,3 +34,4 @@ google-services.json
 
 # MacOS folder's DS_Store files
 .DS_Store
+classifier/kotlin-classifier/build.gradle.kts
