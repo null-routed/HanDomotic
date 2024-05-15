@@ -5,37 +5,33 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
-import android.widget.Button
-import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
 import it.unipi.masss.classifiertest.R
-import it.unipi.masss.classifiertest.presentation.theme.ClassifierTestTheme
-import java.nio.DoubleBuffer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import org.apache.commons.math3.complex.Complex
 import java.nio.FloatBuffer
-import kotlin.random.Random
-import java.io.FileInputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import kotlin.math.abs
+import kotlin.math.pow
+import org.apache.commons.math3.stat.descriptive.moment.Kurtosis
+import org.apache.commons.math3.transform.DftNormalization
+import org.apache.commons.math3.transform.FastFourierTransformer
+import org.apache.commons.math3.transform.TransformType
+import kotlin.math.sqrt
+
+
+@Serializable
+data class GestureData(
+    val timestamps: List<String>,
+    val xTimeSeries: List<Float>,
+    val yTimeSeries: List<Float>,
+    val zTimeSeries: List<Float>,
+    val label: String
+)
 
 class MainActivity : ComponentActivity() {
-
     fun leggiFileToArrayFloat(context: Context, resourceId: Int): Array<Array<Float>> {
         val result = mutableListOf<Array<Float>>()
 
@@ -55,84 +51,155 @@ class MainActivity : ComponentActivity() {
 
         return result.toTypedArray()
     }
+
+    fun loadData(context: Context, resourceId: Int): List<GestureData> {
+        val inputStream = context.resources.openRawResource(resourceId)
+        val jsonString = inputStream.bufferedReader().use { it.readText() }
+        return Json.decodeFromString(jsonString)
+    }
+
+    fun FloatArray.skewness(): Double {
+        val mean = this.average()
+        val n = this.size.toDouble()
+        val s3 = this.sumOf{ ((it - mean) / this.standardDeviation()).pow(3) }
+        return (n / ((n - 1) * (n - 2))) * s3
+    }
+
+    fun extractFeatures(data: FloatArray): List<Double> {
+        val features = mutableListOf<Double>()
+
+        // Time domain features
+        features.apply {
+            add(data.average())
+            add(data.standardDeviation())
+            add(data.minOrNull()?.toDouble() ?: 0.0)
+            add(data.maxOrNull()?.toDouble() ?: 0.0)
+            add(data.sumOf { abs(it.toDouble()) } / data.size)  // SMA using sumOf
+            add(data.sumOf { it.toDouble() * it.toDouble() })  // Energy using sumOf
+            add(data.zeroCrossings().toDouble())  // Zero crossings
+            add(Kurtosis().evaluate(data.map { it.toDouble() }.toDoubleArray()))  // Kurtosis
+            add(data.skewness())  // Skewness
+        }
+
+        // Frequency domain features
+        val (spectralEnergy, dominantFrequency) = extractFrequencyFeatures(data, 50.0)
+        features.apply {
+            add(spectralEnergy)
+            add(dominantFrequency)
+        }
+
+        return features
+    }
+
+
+    fun extractFrequencyFeatures(data: FloatArray, sampleRate: Double): Pair<Double, Double> {
+        val n = Integer.highestOneBit(data.size - 1) shl 1
+        val paddedData = data.copyOf(n)
+
+        val transform = FastFourierTransformer(DftNormalization.STANDARD)
+        val fftVals = transform.transform(paddedData.map { Complex(it.toDouble(), 0.0) }.toTypedArray(), TransformType.FORWARD)
+
+        val fftMagnitudes = fftVals.map { it.abs() }
+        val spectralEnergy = fftMagnitudes.sumOf { it * it } / n
+        val frequencies = fftVals.indices.map { index -> (index * sampleRate) / n }
+        val dominantFrequencyIndex = fftMagnitudes.indices.maxByOrNull { fftMagnitudes[it] } ?: 0
+        val dominantFrequency = frequencies[dominantFrequencyIndex]
+
+        return Pair(spectralEnergy, dominantFrequency)
+    }
+
+    fun FloatArray.standardDeviation(): Double {
+        val mean = this.average()
+        return sqrt(this.fold(0.0, { acc, d -> acc + (d - mean).pow(2.0) }) / this.size)
+    }
+
+    fun FloatArray.zeroCrossings(): Int {
+        var count = 0
+        for (i in 1 until this.size) {
+            if (this[i - 1] * this[i] < 0) {
+                count++
+            }
+        }
+        return count
+    }
+
+    // This function computes the highest class probability given a confidence Array<FloatArray>
+    fun computeMaxFloatArray(matrix: Array<FloatArray>) : Float{
+        var max : Float = 0.0f
+        for(row in matrix){
+            for (value in row){
+                if(value >= max){
+                    max = value
+                }
+            }
+        }
+        return max
+    }
+
     // Create an OrtSession with the given OrtEnvironment
     private fun createORTSession( ortEnvironment: OrtEnvironment) : OrtSession {
         val modelBytes = resources.openRawResource( R.raw.gesture_classifier).readBytes()
         return ortEnvironment.createSession( modelBytes )
     }
 
-    // Make predictions from a given input
-    private fun runPrediction(input: FloatArray, ortSession: OrtSession, ortEnvironment: OrtEnvironment): Pair<Array<FloatArray>, Array<String>> {
-        // Get the name of the input node
-        val inputName = ortSession.inputNames?.iterator()?.next()
+    // This method performs a single prediction
+    fun retrievePredictionAndConfidence(inputFeatures: FloatArray, numFeatures: Int, threshold: Float = 1.0f) : Pair<String, Float> {
 
-        val floatBufferInputs = FloatBuffer.wrap(input)
-        // Create input tensor with floatBufferInputs of shape (1, 30)
-        val inputTensor = OnnxTensor.createTensor(ortEnvironment, floatBufferInputs, longArrayOf(1, 33))
-        // Run the model
+        // Creating an ortEnvironment
+        val ortEnvironment = OrtEnvironment.getEnvironment()
+        val ortSession = createORTSession(ortEnvironment)
+
+        val inputName = ortSession.inputNames?.iterator()?.next()
+        val floatInputs = FloatBuffer.wrap(inputFeatures)
+
+        // Creating an input tensor with numFeatures features as shape
+        val inputTensor = OnnxTensor.createTensor(ortEnvironment, floatInputs, longArrayOf(1, numFeatures.toLong()))
+
+        // Running the model
         val results = ortSession.run(mapOf(inputName to inputTensor))
-        val preProbabilities = results[1].value as Array<FloatArray>
-        // val probabilities =  convertPrimitiveFloatArray2DToFloatObjectArray2D(preProbabilities) as FloatArray
-        val predictions = results[0].value as Array<String>
-        inputTensor.close()
-        // val output = results as Array<String>
-        // Fetch and return the results as a string
-        return preProbabilities to predictions
+        val confidenceMatrix = results[1].value as Array<FloatArray>
+        val confidence = computeMaxFloatArray(confidenceMatrix)
+        val predictionVector = results[0].value as Array<String>
+
+        val prediction : String
+        if(confidence < threshold){
+            prediction = "No Gesture"
+        } else {
+            prediction = predictionVector[0]
+        }
+
+        return prediction to confidence
+    }
+
+    fun main() {
+        // Load data
+        val gestureData = loadData(this,R.raw.labeled_data_circle)
+        var allFeatures = mutableListOf<Double>() // List empty at the beginning
+        // Process each gesture to extract features
+        gestureData.forEach { gesture ->
+            val xFeatures = extractFeatures(gesture.xTimeSeries.toFloatArray())
+            val yFeatures = extractFeatures(gesture.yTimeSeries.toFloatArray())
+            val zFeatures = extractFeatures(gesture.zTimeSeries.toFloatArray())
+            allFeatures = (xFeatures + yFeatures + zFeatures).toMutableList()
+            println("Features for label ${gesture.label}:")
+            println("X-axis: $xFeatures")
+            println("Y-axis: $yFeatures")
+            println("Z-axis: $zFeatures")
+        }
+
+        for(feature in allFeatures){
+            println(feature)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        System.getProperty("os.arch", "generic")
+        // System.getProperty("os.arch", "generic")
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.pippo)
+        main()
+        // setContentView(R.layout.pippo)
         // setTheme(android.R.style.Theme_DeviceDefault)
-        val button : Button = findViewById(R.id.button2)
-        val outputTextView : TextView = findViewById(R.id.textView2)
+        // val button : Button = findViewById(R.id.button2)
+        // val outputTextView : TextView = findViewById(R.id.textView2)
 
-        button.setOnClickListener{
-            // Giving in input an array of 30 random floats
-            // val floatArraySize = 30
-            // val inputs = FloatArray(floatArraySize) { Random.nextFloat() }
-
-            // Trying with features related to a CIRCLE gesture (custom passed)
-            /*val inputs = floatArrayOf(
-                0.6714647492727273f, 1.3284390079341724f, -2.5785553f, 2.7940333f, 1.2450284143636359f,
-                121.8588309024358f, 6.0f, -0.4037437158434334f, 144.03753662356294f, 0.0f, -4.922348016181818f,
-                6.558244526993268f, -19.302053f, 7.66384f, 5.865837622000001f, 3698.2044697535434f, 5.0f,
-                -0.5550304390739136f, 4940.991313633613f, 0.0f, 4.861883669999999f, 8.529836947341735f,
-                -12.258312f, 17.104177f, 8.775228053636363f, 5301.781714286688f, 2.0f, -0.7441296674056268f,
-                6483.976438716447f, 0.01818181818181818f
-            )*/
-
-            /*val inputs = floatArrayOf(-2.0351584947090906f, 2.2859100726954944f, -7.563283f, 3.3758245f, 2.4176213410727274f, 515.1990227470511f, 8f, 2.73424182369022f, -0.22397272080358266f, 729.7339874877176f, 0.0f, -1.5346832769090908f, 6.0355624364868605f, -15.160085f, 6.7492547f, 4.860360026727273f, 2133.0796676835594f, 4f, 2.4959790576431775f, -0.6940063667650447f, 2222.214666479994f, 0.03636363636363636f, 10.32684492f, 9.411386959967887f, -4.912902f, 25.649082f, 11.807767519999999f, 10736.986178159086f, 2f, 1.8089441868040197f, -0.2114432650644774f, 16305.919838463975f, 0.0f)*/
-            val inputs = leggiFileToArrayFloat(this, R.raw.inputs)
-            for(input in inputs){
-                println("FloatArray: ${input.toFloatArray().joinToString()}")
-
-                val ortEnvironment = OrtEnvironment.getEnvironment()
-                val ortSession = createORTSession( ortEnvironment )
-                val output = runPrediction( input.toFloatArray() , ortSession , ortEnvironment )
-
-                val confidence = output.first
-                val prediction = output.second
-
-                println("Matrice di Confidence:")
-                var rowIndex = 1
-                for (row in confidence) {
-                    print("Riga $rowIndex: ")
-                    for (value in row) {
-                        print("$value ")
-                    }
-                    println() // Va a capo dopo aver stampato tutti i valori di una riga
-                    rowIndex++
-                }
-                println() // Vai a capo dopo ogni riga
-                // Stampa la matrice di prediction
-                println("Matrice di Prediction:")
-                for (value in prediction) {
-                    print("$value ")
-                    println() // Vai a capo dopo ogni riga
-                }
-            }
-        }
     }
 }

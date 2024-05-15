@@ -59,6 +59,8 @@ dependencies {
     implementation(libs.core.splashscreen)
     implementation(libs.constraintlayout)
     implementation(libs.onnxruntime.android)
+    implementation(libs.compose.preview.renderer)
+    implementation(libs.commons.math3)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)

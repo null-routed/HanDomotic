@@ -10,6 +10,8 @@ coreSplashscreen = "1.0.1"
 onnxruntime = "1.17.3"
 constraintlayout = "2.1.4"
 onnxruntimeAndroid = "latest.release"
+composePreviewRenderer = "0.0.1-alpha01"
+commonsMath3 = "3.6.1"
 
 [libraries]
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
@@ -26,6 +28,8 @@ core-splashscreen = { group = "androidx.core", name = "core-splashscreen", versi
 onnxruntime = { group = "com.microsoft.onnxruntime", name = "onnxruntime", version.ref = "onnxruntime" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntimeAndroid" }
+compose-preview-renderer = { group = "com.android.tools.compose", name = "compose-preview-renderer", version.ref = "composePreviewRenderer" }
+commons-math3 = { group = "org.apache.commons", name = "commons-math3", version.ref = "commonsMath3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
