@@ -52,15 +52,15 @@ class MainActivity : ComponentActivity() {
 
         return result.toTypedArray()
     }
-    fun calculateCorrelations(xFeatures: FloatArray, yFeatures: FloatArray, zFeatures: FloatArray): List<Double> {
-        val features = mutableListOf<Double>()
+    fun calculateCorrelations(xFeatures: FloatArray, yFeatures: FloatArray, zFeatures: FloatArray): List<Float> {
+        val features = mutableListOf<Float>()
         val mAxisData = arrayOf(xFeatures, yFeatures, zFeatures)
 
         // Calculate pairwise correlations
         for (i in 0 until 3) {
             for (j in i + 1 until 3) {
                 val correlation = PearsonsCorrelation().correlation(mAxisData[i].toDoubleArray(), mAxisData[j].toDoubleArray())
-                features.add(correlation)
+                features.add(correlation.toFloat())
             }
         }
 
@@ -196,7 +196,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // This method performs a single prediction
-    fun retrievePredictionAndConfidence(inputFeatures: FloatArray, numFeatures: Int, threshold: Float = 1.0f) : Pair<String, Float> {
+    fun retrievePredictionAndConfidence(inputFeatures: FloatArray, numFeatures: Int, threshold: Float = 0.99f) : Pair<String, Float> {
 
         // Creating an ortEnvironment
         val ortEnvironment = OrtEnvironment.getEnvironment()
@@ -226,13 +226,13 @@ class MainActivity : ComponentActivity() {
 
     fun main() {
         // Load data
-        val gestureData = loadData(this,R.raw.labeled_data_circle)
+        val gestureData = loadData(this,R.raw.labeled_data_circle) + loadData(this, R.raw.labeled_data_clap) + loadData(this, R.raw.labeled_data_random)
         // Process each gesture to extract features
         gestureData.forEach { gesture ->
             val xFeatures = extractFeatures(gesture.xTimeSeries.toFloatArray())
             val yFeatures = extractFeatures(gesture.yTimeSeries.toFloatArray())
             val zFeatures = extractFeatures(gesture.zTimeSeries.toFloatArray())
-            val allFeatures =
+            val allFeatures  =
                     (xFeatures + yFeatures + zFeatures) +
                     calculateCorrelations(
                         gesture.xTimeSeries.toFloatArray(),
@@ -240,11 +240,17 @@ class MainActivity : ComponentActivity() {
                         gesture.zTimeSeries.toFloatArray()
                     )
 
-            println("allFeatures: $allFeatures")
-            //println("True class: ${gesture.label}:")
-            //val (prediction, confidence) = retrievePredictionAndConfidence(allFeatures.toFloatArray(), allFeatures.size)
-            // println("Predicted class: $prediction , with confidence: $confidence")
-
+            // println("allFeatures: $allFeatures")
+            // println("True class: ${gesture.label}:")
+            val (prediction, confidence) = retrievePredictionAndConfidence(allFeatures.toFloatArray(), allFeatures.size)
+            println("Predicted: $prediction, Actual: ${gesture.label}, with confidence: $confidence")
+            if(prediction != gesture.label){
+                if(gesture.label == "Other"){
+                    Log.i("PRED_OK", "Predicted: $prediction, Actual: ${gesture.label}, with confidence: $confidence")
+                } else {
+                    Log.i("PRED_ERR", "Predicted: $prediction, Actual: ${gesture.label}, with confidence: $confidence")
+                }
+            }
         }
     }
 

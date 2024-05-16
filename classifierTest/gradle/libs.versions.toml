@@ -12,6 +12,7 @@ commonsMath3 = "3.6.1"
 kotlinxSerializationJson = "1.6.3"
 onnxruntimeAndroid = "1.17.3"
 fft4j = "2.0"
+jtransforms = "3.1"
 
 [libraries]
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
@@ -30,6 +31,7 @@ commons-math3 = { group = "org.apache.commons", name = "commons-math3", version.
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntimeAndroid" }
 fft4j = { group = "com.tambapps.fft4j", name = "fft4j", version.ref = "fft4j" }
+jtransforms = { group = "com.github.wendykierp", name = "JTransforms", version.ref = "jtransforms" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

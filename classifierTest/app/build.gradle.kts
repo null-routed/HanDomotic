@@ -50,7 +50,7 @@ android {
 }
 
 dependencies {
-    implementation("com.github.wendykierp:JTransforms:3.1")
+    // implementation("com.github.wendykierp:JTransforms:3.1")
     implementation(libs.play.services.wearable)
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)
@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.onnxruntime.android)
     implementation(libs.fft4j)
+    implementation(libs.jtransforms)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)
