@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    kotlin("plugin.serialization") version "1.9.22"
 }
 
 android {
@@ -49,6 +50,7 @@ android {
 }
 
 dependencies {
+
     implementation(libs.play.services.wearable)
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)
@@ -57,10 +59,10 @@ dependencies {
     implementation(libs.compose.foundation)
     implementation(libs.activity.compose)
     implementation(libs.core.splashscreen)
-    implementation(libs.constraintlayout)
-    implementation(libs.onnxruntime.android)
-    implementation(libs.compose.preview.renderer)
     implementation(libs.commons.math3)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.onnxruntime.android)
+    implementation(libs.fft4j)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)

@@ -4,8 +4,5 @@
     <issue id="IconLocation">
         <ignore path="res/drawable/tile_preview.png" />
         <ignore path="res/drawable-round/tile_preview.png" />
-    </issue><issue id="IconLocation">
-        <ignore path="res/drawable/tile_preview.png" />
-        <ignore path="res/drawable-round/tile_preview.png" />
     </issue>
 </lint>
