@@ -5,13 +5,13 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import com.tambapps.fft4j.FastFouriers
 import it.unipi.masss.classifiertest.R
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.apache.commons.math3.complex.Complex
-import org.apache.commons.math3.stat.descriptive.moment.Kurtosis
 import org.apache.commons.math3.transform.DftNormalization
 import org.apache.commons.math3.transform.FastFourierTransformer
 import org.apache.commons.math3.transform.TransformType
@@ -21,7 +21,8 @@ import java.nio.FloatBuffer
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
-
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation
+import org.jtransforms.fft.FloatFFT_1D
 @Serializable
 data class GestureData(
     val timestamps: List<String>,
@@ -51,6 +52,20 @@ class MainActivity : ComponentActivity() {
 
         return result.toTypedArray()
     }
+    fun calculateCorrelations(xFeatures: FloatArray, yFeatures: FloatArray, zFeatures: FloatArray): List<Double> {
+        val features = mutableListOf<Double>()
+        val mAxisData = arrayOf(xFeatures, yFeatures, zFeatures)
+
+        // Calculate pairwise correlations
+        for (i in 0 until 3) {
+            for (j in i + 1 until 3) {
+                val correlation = PearsonsCorrelation().correlation(mAxisData[i].toDoubleArray(), mAxisData[j].toDoubleArray())
+                features.add(correlation)
+            }
+        }
+
+        return features
+    }
 
     fun loadData(context: Context, resourceId: Int): List<GestureData> {
         val inputStream = context.resources.openRawResource(resourceId)
@@ -58,93 +73,92 @@ class MainActivity : ComponentActivity() {
         return Json.decodeFromString(jsonString)
     }
 
-    fun FloatArray.skewness(): Double {
-        val mean = this.average()
-        val n = this.size.toDouble()
-        val s3 = this.sumOf{ ((it - mean) / this.standardDeviation()).pow(3) }
-        return (n / ((n - 1) * (n - 2))) * s3
-    }
-
-    fun kurtosis(data: FloatArray): Float {
-        val n = data.size
-        val mean: Double = data.average()
-        val std: Double = data.standardDeviation()
-        var kurt = 0.0f
-        for (x in data) {
-            kurt += ((x - mean) / std).pow(4.0).toFloat()
-        }
-        kurt = kurt / n
-        return (kurt - 3)
-    }
-
     fun ptp(array: FloatArray): Float {
         val max = array.maxOrNull()!!
         val min = array.minOrNull()!!
         return max - min
     }
+
+    fun calculateAvgAbsIncrement(axisData: FloatArray): Float {
+        // Calculate the absolute increments
+        val diffs = FloatArray(axisData.size - 1) { i -> abs(axisData[i + 1] - axisData[i]) }
+        // Calculate the mean of the absolute increments
+        return diffs.average().toFloat()
+    }
+
+
+    fun calculateMeanCrossings(axisData: FloatArray): Float {
+        // Calculate the mean of the axis data
+        val mean = axisData.average()
+        // Calculate the mean-crossings
+        var crossings = 0
+        for (i in 1 until axisData.size) {
+            val prev = axisData[i - 1] - mean
+            val current = axisData[i] - mean
+            if (prev * current < 0) {
+                crossings++
+            }
+        }
+        return crossings.toFloat()
+    }
+
     fun extractFeatures(data: FloatArray): List<Float> {
         val features = mutableListOf<Float>()
-        val ptpValue = ptp(data)
         // Time domain features
         features.apply {
             add(data.average().toFloat())
             add(data.standardDeviation().toFloat())
+            add(ptp(data))
             add(data.minOrNull() ?: 0.0f)
             add(data.maxOrNull() ?: 0.0f)
             add((data.sumOf { abs(it.toDouble()) } / data.size).toFloat())  // SMA using sumOf
-            add(data.sumOf { it.toDouble() * it.toDouble() }.toFloat())  // Energy using sumOf
-            add(data.zeroCrossings().toFloat())  // Zero crossings
-            add(Kurtosis().evaluate(data.map { it.toDouble() }.toDoubleArray()).toFloat())  // Kurtosis
-            add(data.skewness().toFloat())  // Skewness
+            add(calculateAvgAbsIncrement(data))
+            add(calculateMeanCrossings(data))
         }
 
         // Frequency domain features
         // val (spectralEnergy, dominantFrequency) = extractFrequencyFeatures(data, 50.0)
-        val spectralEnergy = extractFrequencyFeaturesEnanched(data)
-        features.apply {
-            add(ptpValue)
-            add(0.0f)
-        }
-
+        val frequencyFeatures = extractFrequencyFeatures(data)
+        features.addAll(frequencyFeatures.toList())
         return features
     }
 
-    fun extractFrequencyFeaturesEnanched(data: FloatArray): Float{
-        val inputRe: DoubleArray = data.toDoubleArray()
-        // contains a number of 0 components equal to the ones in data
-        val inputIm: DoubleArray = DoubleArray(data.size)
+    fun extractFrequencyFeatures(data: FloatArray): FloatArray {
+        val n = data.size
+        val fft = FloatFFT_1D(n.toLong())
 
-        val outputRe = DoubleArray(inputRe.size)
-        val outputIm = DoubleArray(inputRe.size)
+        // JTransforms requires a double-sized array for real input to store complex outputs.
+        val fftData = FloatArray(n)  // Directly use the data array if not modifying original data.
+        System.arraycopy(data, 0, fftData, 0, n)
 
-        // Computing the fast-fourier transform
-        FastFouriers.BASIC.transform(inputRe, inputIm, outputRe, outputIm)
-        // Calcolo dell'energia spettrale per ciascuna frequenza campionata
-        val spectralEnergy = DoubleArray(outputRe.size)
-        for (i in outputRe.indices) {
-            val magnitudeSquared = outputRe[i] * outputRe[i] + outputIm[i] * outputIm[i]
-            spectralEnergy[i] = magnitudeSquared / data.size.toDouble()
+        // Perform the FFT in place for real data
+        fft.realForward(fftData)
+
+        // Calculate spectral energy
+        var spectralEnergy = 0.0
+        var totalMagnitude = 0.0
+        val freqs = FloatArray(n/2) { it * 1.0f / n }
+
+        for (i in 0 until n/2) {
+            val re = fftData[2*i]   // Real part
+            val im = if (i == 0 || 2*i == n - 1) 0.0f else fftData[2*i + 1] // Imaginary part
+            val mag = re*re + im*im
+            spectralEnergy += mag
+            totalMagnitude += Math.sqrt(mag.toDouble())
         }
+        spectralEnergy /= n
 
-        // Calcolo dell'energia spettrale totale come somma delle energie spettrali per ciascuna frequenza campionata
-        val totalSpectralEnergy = spectralEnergy.sum()
-        return totalSpectralEnergy.toFloat()
-    }
+        // Calculate spectral centroid
+        var spectralCentroid = 0.0
+        for (i in 0 until n/2) {
+            val re = fftData[2*i]
+            val im = if (i == 0 || 2*i == n - 1) 0.0f else fftData[2*i + 1]
+            val mag = Math.sqrt((re*re + im*im).toDouble())
+            spectralCentroid += freqs[i] * mag
+        }
+        spectralCentroid /= totalMagnitude
 
-    fun extractFrequencyFeatures(data: FloatArray, sampleRate: Double): Pair<Double, Double> {
-        val n = Integer.highestOneBit(data.size - 1) shl 1
-        val paddedData = data.copyOf(n)
-
-        val transform = FastFourierTransformer(DftNormalization.STANDARD)
-        val fftVals = transform.transform(paddedData.map { Complex(it.toDouble(), 0.0) }.toTypedArray(), TransformType.FORWARD)
-
-        val fftMagnitudes = fftVals.map { it.abs() }
-        val spectralEnergy = fftMagnitudes.sumOf { it * it } / n
-        val frequencies = fftVals.indices.map { index -> (index * sampleRate) / n }
-        val dominantFrequencyIndex = fftMagnitudes.indices.maxByOrNull { fftMagnitudes[it] } ?: 0
-        val dominantFrequency = frequencies[dominantFrequencyIndex]
-
-        return Pair(spectralEnergy, dominantFrequency)
+        return floatArrayOf(spectralEnergy.toFloat() * 2, spectralCentroid.toFloat())
     }
 
     fun FloatArray.standardDeviation(): Double {
@@ -218,11 +232,19 @@ class MainActivity : ComponentActivity() {
             val xFeatures = extractFeatures(gesture.xTimeSeries.toFloatArray())
             val yFeatures = extractFeatures(gesture.yTimeSeries.toFloatArray())
             val zFeatures = extractFeatures(gesture.zTimeSeries.toFloatArray())
-            val allFeatures = (xFeatures + yFeatures + zFeatures)
+            val allFeatures =
+                    (xFeatures + yFeatures + zFeatures) +
+                    calculateCorrelations(
+                        gesture.xTimeSeries.toFloatArray(),
+                        gesture.yTimeSeries.toFloatArray(),
+                        gesture.zTimeSeries.toFloatArray()
+                    )
+
             println("allFeatures: $allFeatures")
             //println("True class: ${gesture.label}:")
             //val (prediction, confidence) = retrievePredictionAndConfidence(allFeatures.toFloatArray(), allFeatures.size)
             // println("Predicted class: $prediction , with confidence: $confidence")
+
         }
     }
 
