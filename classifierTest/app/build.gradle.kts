@@ -50,7 +50,7 @@ android {
 }
 
 dependencies {
-
+    implementation("com.github.wendykierp:JTransforms:3.1")
     implementation(libs.play.services.wearable)
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)
