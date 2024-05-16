@@ -12,6 +12,10 @@
 
     <uses-feature android:name="android.hardware.type.watch" />
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -20,14 +24,14 @@
         android:theme="@android:style/Theme.DeviceDefault">
         <uses-library
             android:name="com.google.android.wearable"
-            android:required="true" />
+            android:required="false" />
 
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
         <activity
-            android:name=".presentation.MainActivity"
+            android:name=".presentation.MainActivity2"
             android:exported="true"
             android:taskAffinity=""
             android:theme="@style/MainActivityTheme.Starting">
@@ -37,6 +41,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name="com.kontakt.sdk.android.ble.service.ProximityService"
+            android:exported="false"/>
     </application>
 
 </manifest>
