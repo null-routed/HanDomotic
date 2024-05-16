@@ -20,5 +20,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "HanDomotic"
-include(":app")
- 
+include(":smartphoneApp")
+include(":smartwatchApp")
