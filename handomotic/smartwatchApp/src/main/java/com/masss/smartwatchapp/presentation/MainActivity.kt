@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
 
     private val tag: String = "HanDomotic"
     // Defining how many sample to listen before passing the features to the classifier
-    private val numListeningSamples: Int = 100
+    private val numListeningSamples: Int = 5
     // Defining the lenght of the windowing buffer array
     private val bufferSize: Int = 200
     private var counter: Int = 0
@@ -80,8 +80,8 @@ class MainActivity : AppCompatActivity() {
                     counter++
                 else{
                     Log.i("COUNTER", "Fine giro")
-                    println("xWindow contents: ${xWindow.joinToString(", ")}")
-                    println("xWindow size: ${xWindow.size}")
+                    Log.i("PIPPO","xWindow contents: ${xWindow.joinToString(", ")}")
+                    Log.i("PIPPO","xWindow size: ${xWindow.size}")
                     counter = 0
                 }
         }
@@ -94,6 +94,8 @@ class MainActivity : AppCompatActivity() {
         //TODO: show app name following device's screen curvature ?
         val mainButton: Button = findViewById<Button>(R.id.mainButton)
         mainButton.text = resources.getString(R.string.start)
+
+        Log.i("PIPPO","TEST MESSAGE")
 
         checkAndRequestPermissions()
     }
@@ -150,7 +152,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        registerReceiver(accelerometerReceiver, IntentFilter("AccelerometerData"))
+        registerReceiver(accelerometerReceiver, IntentFilter("AccelerometerData"),
+            RECEIVER_EXPORTED)
         Log.d(tag, "An accelerometer receiver has been registered.")
     }
 
