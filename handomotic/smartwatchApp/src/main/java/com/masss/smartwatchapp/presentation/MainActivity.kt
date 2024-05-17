@@ -14,11 +14,19 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
+import kotlinx.coroutines.delay
+import java.util.LinkedList
+import java.util.Queue
 
 
 class MainActivity : AppCompatActivity() {
 
     private val tag: String = "HanDomotic"
+    // Defining how many sample to listen before passing the features to the classifier
+    private val numListeningSamples: Int = 25
+    // Defining the lenght of the windowing buffer array
+    private val bufferSize: Int = 50
+    private var counter: Int = 0
 
     private var appIsRecording: Boolean = false
 
@@ -26,30 +34,83 @@ class MainActivity : AppCompatActivity() {
         android.Manifest.permission.BODY_SENSORS,
         android.Manifest.permission.BLUETOOTH,
         android.Manifest.permission.BLUETOOTH_ADMIN,
-        android.Manifest.permission.BLUETOOTH_SCAN,
         android.Manifest.permission.ACCESS_COARSE_LOCATION,
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
 
-    private var xTimeSeries = mutableListOf<Float>()
+    private val xTimeSeries = mutableListOf<Float>()
     private var yTimeSeries = mutableListOf<Float>()
     private var zTimeSeries = mutableListOf<Float>()
     private var recordingTimestamps = mutableListOf<Long>()
 
+    /* Windowing buffering arrays */
+    private val xWindow: Queue<Float> = LinkedList()
+    private val yWindow: Queue<Float> = LinkedList()
+    private val zWindow: Queue<Float> = LinkedList()
+
+    // From the index 0 to the index numListeningSamples - 1 we have the incoming samples
+    // From the index numListeningSamples to the end we have the old samples
+    private fun addSample(xValue: Float, yValue: Float, zValue: Float){
+
+        // Adding value to the queue
+        if(xWindow.size < bufferSize)
+        {
+            xWindow.add(xValue)
+            yWindow.add(yValue)
+            zWindow.add(zValue)
+        }
+
+        else{
+            xWindow.poll()
+            yWindow.poll()
+            zWindow.poll()
+
+            xWindow.add(xValue)
+            yWindow.add(yValue)
+            zWindow.add(zValue)
+        }
+
+        // Update time series with the latest state of the window
+        if (xWindow.size == bufferSize) {
+            xTimeSeries.clear()
+            yTimeSeries.clear()
+            zTimeSeries.clear()
+
+            // First half with the most recent samples
+            xTimeSeries.addAll(xWindow.take(numListeningSamples))
+            yTimeSeries.addAll(yWindow.take(numListeningSamples))
+            zTimeSeries.addAll(zWindow.take(numListeningSamples))
+
+            // Second half with the oldest samples
+            xTimeSeries.addAll(xWindow.take(numListeningSamples))
+            yTimeSeries.addAll(yWindow.take(numListeningSamples))
+            zTimeSeries.addAll(zWindow.take(numListeningSamples))
+        }
+    }
+
     private val accelerometerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val xValue = intent?.getFloatExtra("xValue", 0f)
-            val yValue = intent?.getFloatExtra("yValue", 0f)
-            val zValue = intent?.getFloatExtra("zValue", 0f)
-            val timestamp = intent?.getLongExtra("timestamp", 0)
+                        val xValue = intent?.getFloatExtra("xValue", 0f)
+                        val yValue = intent?.getFloatExtra("yValue", 0f)
+                        val zValue = intent?.getFloatExtra("zValue", 0f)
+                        val timestamp = intent?.getLongExtra("timestamp", 0)
 
-            if (xValue != null && yValue != null && zValue != null && timestamp != null) {
-                xTimeSeries.add(xValue)
-                yTimeSeries.add(yValue)
-                zTimeSeries.add(zValue)
-                recordingTimestamps.add(timestamp)
-                Log.d(tag, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
+                        if (xValue != null && yValue != null && zValue != null && timestamp != null) {
+                            // xTimeSeries.add(xValue)
+                            // yTimeSeries.add(yValue)
+                            // zTimeSeries.add(zValue)
+                            // recordingTimestamps.add(timestamp)
+                            Log.d(tag, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
             }
+                addSample(xValue!!, yValue!!, zValue!!)
+                println("xWindow contents: ${xTimeSeries.joinToString(", ")}")
+                println("yWindow contents: ${yTimeSeries.joinToString(", ")}")
+                println("zWindow contents: ${zTimeSeries.joinToString(", ")}")
+
+                xTimeSeries.clear()
+                yTimeSeries.clear()
+                zTimeSeries.clear()
+                counter = 0
         }
     }
 
@@ -127,8 +188,6 @@ class MainActivity : AppCompatActivity() {
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
         Log.d(tag, "Started accelerometer data gathering")
-
-        // start classifier
     }
 
     private fun stopAppServices() {
