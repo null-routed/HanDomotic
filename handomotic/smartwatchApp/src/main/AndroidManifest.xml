@@ -3,6 +3,16 @@
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- ACCELEROMETER DATA GATHERING PERMISSIONS -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <!-- BLUETOOTH SCANNING PERMISSIONS -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+
     <uses-feature android:name="android.hardware.type.watch" />
 
     <application
@@ -15,10 +25,7 @@
             android:name="com.google.android.wearable"
             android:required="true" />
 
-        <!--
-               Set to true if your app is Standalone, that is, it does not require the handheld
-               app to run.
-        -->
+        <!-- smartwatch app does not require mobile app to run at the same time -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />

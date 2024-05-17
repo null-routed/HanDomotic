@@ -1,73 +1,82 @@
-/* While this template provides a good starting point for using Wear Compose, you can always
- * take a look at https://github.com/android/wear-os-samples/tree/main/ComposeStarter and
- * https://github.com/android/wear-os-samples/tree/main/ComposeAdvanced to find the most up to date
- * changes to the libraries and their usages.
- */
-
 package com.masss.smartwatchapp.presentation
 
+import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
+import android.util.Log
+import android.widget.Button
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.masss.smartwatchapp.R
-import com.masss.smartwatchapp.presentation.theme.HanDomoticTheme
+import kotlin.properties.Delegates
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+class MainActivity : AppCompatActivity() {
 
-        super.onCreate(savedInstanceState)
+    private val tag: String = "HanDomotic"
 
-        setTheme(android.R.style.Theme_DeviceDefault)
-
-        setContent {
-            WearApp("Android")
-        }
-    }
-}
-
-@Composable
-fun WearApp(greetingName: String) {
-    HanDomoticTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colors.background),
-            contentAlignment = Alignment.Center
-        ) {
-            TimeText()
-            Greeting(greetingName = greetingName)
-        }
-    }
-}
-
-@Composable
-fun Greeting(greetingName: String) {
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center,
-        color = MaterialTheme.colors.primary,
-        text = stringResource(R.string.hello_world, greetingName)
+    private val requiredPermissions = arrayOf(
+        android.Manifest.permission.BODY_SENSORS,
+        android.Manifest.permission.BLUETOOTH,
+        android.Manifest.permission.BLUETOOTH_ADMIN,
+        android.Manifest.permission.BLUETOOTH_SCAN,
+        android.Manifest.permission.ACCESS_COARSE_LOCATION,
+        android.Manifest.permission.ACCESS_FINE_LOCATION
     )
-}
 
-@Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
-@Composable
-fun DefaultPreview() {
-    WearApp("Preview Android")
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        //TODO: show app name following device's screen curvature ?
+
+        checkAndRequestPermissions()
+    }
+
+
+    private fun checkAndRequestPermissions() {
+        val permissionsToBeRequested = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (permissionsToBeRequested.isNotEmpty())
+            requestPermissionsLauncher.launch(permissionsToBeRequested.toTypedArray())
+        else
+            onAllPermissionsGranted()
+    }
+
+    private val requestPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allPermissionsGranted = permissions.entries.all { it.value }
+        if (allPermissionsGranted)
+            onAllPermissionsGranted()
+        else
+            onPermissionsDenied()
+    }
+
+    private fun onAllPermissionsGranted() {
+        val mainButton: Button = findViewById<Button>(R.id.mainButton)
+
+        // setup onclick listeners
+        /*
+        TODO:
+            -> if app is working, onclick makes it stop
+            -> if app is not working, onclick makes it start
+         */
+        mainButton.setOnClickListener() {
+            startAppWork()
+        }
+    }
+
+    private fun startAppWork() {
+
+    }
+
+    private fun onPermissionsDenied() {
+        /*
+        TODO: make msg appear saying what are the permissions still needed
+            for the app to work
+            Show button to request those missing permissions
+        */
+    }
 }
