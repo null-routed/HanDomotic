@@ -23,9 +23,9 @@ class MainActivity : AppCompatActivity() {
 
     private val tag: String = "HanDomotic"
     // Defining how many sample to listen before passing the features to the classifier
-    private val numListeningSamples: Int = 25
+    private val numListeningSamples: Int = 100
     // Defining the lenght of the windowing buffer array
-    private val bufferSize: Int = 50
+    private val bufferSize: Int = 200
     private var counter: Int = 0
 
     private var appIsRecording: Boolean = false
@@ -44,48 +44,18 @@ class MainActivity : AppCompatActivity() {
     private var recordingTimestamps = mutableListOf<Long>()
 
     /* Windowing buffering arrays */
-    private val xWindow: Queue<Float> = LinkedList()
+    private val xWindow : LinkedList<Float> = LinkedList()
     private val yWindow: Queue<Float> = LinkedList()
     private val zWindow: Queue<Float> = LinkedList()
 
     // From the index 0 to the index numListeningSamples - 1 we have the incoming samples
     // From the index numListeningSamples to the end we have the old samples
     private fun addSample(xValue: Float, yValue: Float, zValue: Float){
-
-        // Adding value to the queue
-        if(xWindow.size < bufferSize)
-        {
-            xWindow.add(xValue)
-            yWindow.add(yValue)
-            zWindow.add(zValue)
+        if(xWindow.size >= bufferSize){
+            xWindow.removeFirst() // removing at the head
         }
-
-        else{
-            xWindow.poll()
-            yWindow.poll()
-            zWindow.poll()
-
-            xWindow.add(xValue)
-            yWindow.add(yValue)
-            zWindow.add(zValue)
-        }
-
-        // Update time series with the latest state of the window
-        if (xWindow.size == bufferSize) {
-            xTimeSeries.clear()
-            yTimeSeries.clear()
-            zTimeSeries.clear()
-
-            // First half with the most recent samples
-            xTimeSeries.addAll(xWindow.take(numListeningSamples))
-            yTimeSeries.addAll(yWindow.take(numListeningSamples))
-            zTimeSeries.addAll(zWindow.take(numListeningSamples))
-
-            // Second half with the oldest samples
-            xTimeSeries.addAll(xWindow.take(numListeningSamples))
-            yTimeSeries.addAll(yWindow.take(numListeningSamples))
-            zTimeSeries.addAll(zWindow.take(numListeningSamples))
-        }
+        // The tail is added in any case
+        xWindow.addLast(xValue)
     }
 
     private val accelerometerReceiver = object : BroadcastReceiver() {
@@ -102,15 +72,18 @@ class MainActivity : AppCompatActivity() {
                             // recordingTimestamps.add(timestamp)
                             Log.d(tag, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
             }
-                addSample(xValue!!, yValue!!, zValue!!)
-                println("xWindow contents: ${xTimeSeries.joinToString(", ")}")
-                println("yWindow contents: ${yTimeSeries.joinToString(", ")}")
-                println("zWindow contents: ${zTimeSeries.joinToString(", ")}")
-
-                xTimeSeries.clear()
+                /*xTimeSeries.clear()
                 yTimeSeries.clear()
-                zTimeSeries.clear()
-                counter = 0
+                zTimeSeries.clear()*/
+                addSample(xValue!!, yValue!!, zValue!!)
+                if(counter < numListeningSamples)
+                    counter++
+                else{
+                    Log.i("COUNTER", "Fine giro")
+                    println("xWindow contents: ${xWindow.joinToString(", ")}")
+                    println("xWindow size: ${xWindow.size}")
+                    counter = 0
+                }
         }
     }
 
