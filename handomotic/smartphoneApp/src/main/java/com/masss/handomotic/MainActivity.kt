@@ -12,6 +12,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.masss.handomotic.ui.theme.HanDomoticTheme
+import com.kontakt.sdk.android.ble.configuration.ScanMode
+import com.kontakt.sdk.android.ble.configuration.ScanPeriod
+import com.kontakt.sdk.android.ble.connection.OnServiceReadyListener
+import com.kontakt.sdk.android.ble.manager.ProximityManager
+import com.kontakt.sdk.android.ble.manager.ProximityManagerFactory
+import com.kontakt.sdk.android.ble.manager.listeners.IBeaconListener
+import com.kontakt.sdk.android.ble.rssi.RssiCalculators
+import com.kontakt.sdk.android.common.KontaktSDK
+import com.kontakt.sdk.android.common.profile.IBeaconDevice
+import com.kontakt.sdk.android.common.profile.IBeaconRegion
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
