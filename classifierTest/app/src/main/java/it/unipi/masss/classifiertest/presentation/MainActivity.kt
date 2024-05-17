@@ -239,6 +239,7 @@ class MainActivity : ComponentActivity() {
                         gesture.yTimeSeries.toFloatArray(),
                         gesture.zTimeSeries.toFloatArray()
                     )
+            Log.i("ALL_FEATURES", allFeatures.joinToString(", "))
 
             // println("allFeatures: $allFeatures")
             // println("True class: ${gesture.label}:")
@@ -266,7 +267,6 @@ class MainActivity : ComponentActivity() {
     }
 
     // Utility method for converting a FloatArray into a DoubleArray
-
     fun FloatArray.toDoubleArray(): DoubleArray {
         val result = DoubleArray(this.size)
         for (i in this.indices) {

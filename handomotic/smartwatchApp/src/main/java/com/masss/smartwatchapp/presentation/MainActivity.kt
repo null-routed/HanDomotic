@@ -14,16 +14,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
-import kotlinx.coroutines.delay
 import java.util.LinkedList
-import java.util.Queue
 
 
 class MainActivity : AppCompatActivity() {
 
     private val tag: String = "HanDomotic"
-    // Defining how many sample to listen before passing the features to the classifier
-    private val numListeningSamples: Int = 5
+    // Defining how many sample to drop from a call to the classifer to another
+    private val classificationFrequency: Int = 5
     // Defining the lenght of the windowing buffer array
     private val bufferSize: Int = 200
     private var counter: Int = 0
@@ -38,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
 
+    // Not needed
     private val xTimeSeries = mutableListOf<Float>()
     private var yTimeSeries = mutableListOf<Float>()
     private var zTimeSeries = mutableListOf<Float>()
@@ -45,45 +44,51 @@ class MainActivity : AppCompatActivity() {
 
     /* Windowing buffering arrays */
     private val xWindow : LinkedList<Float> = LinkedList()
-    private val yWindow: Queue<Float> = LinkedList()
-    private val zWindow: Queue<Float> = LinkedList()
+    private val yWindow: LinkedList<Float> = LinkedList()
+    private val zWindow: LinkedList<Float> = LinkedList()
 
     // From the index 0 to the index numListeningSamples - 1 we have the incoming samples
     // From the index numListeningSamples to the end we have the old samples
     private fun addSample(xValue: Float, yValue: Float, zValue: Float){
         if(xWindow.size >= bufferSize){
             xWindow.removeFirst() // removing at the head
+            yWindow.removeFirst() // we can remove also y and z as they are of the same size of x
+            zWindow.removeFirst()
         }
         // The tail is added in any case
         xWindow.addLast(xValue)
+        yWindow.addLast(yValue)
+        zWindow.addLast(zValue)
     }
 
     private val accelerometerReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-                        val xValue = intent?.getFloatExtra("xValue", 0f)
-                        val yValue = intent?.getFloatExtra("yValue", 0f)
-                        val zValue = intent?.getFloatExtra("zValue", 0f)
-                        val timestamp = intent?.getLongExtra("timestamp", 0)
+            val xValue = intent?.getFloatExtra("xValue", 0f)
+            val yValue = intent?.getFloatExtra("yValue", 0f)
+            val zValue = intent?.getFloatExtra("zValue", 0f)
+            val timestamp = intent?.getLongExtra("timestamp", 0)
 
-                        if (xValue != null && yValue != null && zValue != null && timestamp != null) {
-                            // xTimeSeries.add(xValue)
-                            // yTimeSeries.add(yValue)
-                            // zTimeSeries.add(zValue)
-                            // recordingTimestamps.add(timestamp)
-                            Log.d(tag, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
+            if (xValue != null && yValue != null && zValue != null && timestamp != null) {
+                Log.d(tag, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
+                // Makes the window slide: writes in xWindow, yWindow, zWindow
+                addSample(xValue, yValue, zValue)
             }
-                /*xTimeSeries.clear()
-                yTimeSeries.clear()
-                zTimeSeries.clear()*/
-                addSample(xValue!!, yValue!!, zValue!!)
-                if(counter < numListeningSamples)
-                    counter++
-                else{
-                    Log.i("COUNTER", "Fine giro")
-                    Log.i("PIPPO","xWindow contents: ${xWindow.joinToString(", ")}")
-                    Log.i("PIPPO","xWindow size: ${xWindow.size}")
-                    counter = 0
-                }
+            if(counter < classificationFrequency)
+                counter++
+            else{
+                val xFeatures = FeatureExtractor.extractFeatures(xWindow.toFloatArray())
+                val yFeatures = FeatureExtractor.extractFeatures(yWindow.toFloatArray())
+                val zFeatures = FeatureExtractor.extractFeatures(zWindow.toFloatArray())
+                val allFeatures  =
+                    (xFeatures + yFeatures + zFeatures) +
+                            FeatureExtractor.calculateCorrelations(
+                                xWindow.toFloatArray(),
+                                yWindow.toFloatArray(),
+                                zWindow.toFloatArray()
+                            )
+                Log.i("ALL_FEATURES", allFeatures.joinToString(", "))
+                counter = 0
+            }
         }
     }
 
@@ -94,8 +99,6 @@ class MainActivity : AppCompatActivity() {
         //TODO: show app name following device's screen curvature ?
         val mainButton: Button = findViewById<Button>(R.id.mainButton)
         mainButton.text = resources.getString(R.string.start)
-
-        Log.i("PIPPO","TEST MESSAGE")
 
         checkAndRequestPermissions()
     }
