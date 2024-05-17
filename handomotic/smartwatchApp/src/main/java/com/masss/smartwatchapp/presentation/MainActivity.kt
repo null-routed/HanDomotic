@@ -3,6 +3,7 @@ package com.masss.smartwatchapp.presentation
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -43,11 +44,11 @@ class MainActivity : AppCompatActivity() {
             val timestamp = intent?.getLongExtra("timestamp", 0)
 
             if (xValue != null && yValue != null && zValue != null && timestamp != null) {
-                Log.d(tag, "Received accelerometer data")
                 xTimeSeries.add(xValue)
                 yTimeSeries.add(yValue)
                 zTimeSeries.add(zValue)
                 recordingTimestamps.add(timestamp)
+                Log.d(tag, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
             }
         }
     }
@@ -111,6 +112,12 @@ class MainActivity : AppCompatActivity() {
         Log.d("TIME_SERIES", "X: $xTimeSeries")
         Log.d("TIME_SERIES", "Y: $xTimeSeries")
         Log.d("TIME_SERIES", "Z: $xTimeSeries")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        registerReceiver(accelerometerReceiver, IntentFilter("AccelerometerData"))
+        Log.d(tag, "An accelerometer receiver has been registered.")
     }
 
     private fun startAppServices() {
