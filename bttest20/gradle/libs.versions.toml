@@ -1,13 +1,16 @@
 [versions]
-agp = "8.3.0"
+agp = "8.4.0"
 kotlin = "1.9.0"
 playServicesWearable = "18.1.0"
-composeBom = "2023.08.00"
-composeMaterial = "1.2.1"
-composeFoundation = "1.2.1"
-activityCompose = "1.7.2"
+composeBom = "2024.05.00"
+composeMaterial = "1.3.1"
+composeFoundation = "1.3.1"
+activityCompose = "1.9.0"
 coreSplashscreen = "1.0.1"
 appcompat = "1.6.1"
+constraintlayout = "2.2.0-alpha13"
+recyclerview = "1.4.0-alpha01"
+sdk = "7.1.17"
 
 [libraries]
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
@@ -22,6 +25,9 @@ compose-foundation = { group = "androidx.wear.compose", name = "compose-foundati
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
+sdk = { group = "io.kontakt.mvn", name = "sdk", version.ref = "sdk" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

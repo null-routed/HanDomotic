@@ -14,6 +14,10 @@ composeFoundation = "1.2.1"
 coreSplashscreen = "1.0.1"
 orgJetbrainsKotlinKaptGradlePlugin = "2.0.0-RC3"
 appcompat = "1.6.1"
+sdk = "7.1.17"
+commonsMath3 = "3.6.1"
+jtransforms = "3.1"
+onnxruntimeAndroid = "1.17.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -36,6 +40,10 @@ androidx-compose-foundation = { group = "androidx.wear.compose", name = "compose
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 org-jetbrains-kotlin-kapt-gradle-plugin = { group = "org.jetbrains.kotlin.kapt", name = "org.jetbrains.kotlin.kapt.gradle.plugin", version.ref = "orgJetbrainsKotlinKaptGradlePlugin" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+sdk = { group = "io.kontakt.mvn", name = "sdk", version.ref = "sdk" }
+commons-math3 = { group = "org.apache.commons", name = "commons-math3", version.ref = "commonsMath3" }
+jtransforms = { group = "com.github.wendykierp", name = "JTransforms", version.ref = "jtransforms" }
+onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntimeAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
