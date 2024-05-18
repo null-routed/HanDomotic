@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import com.tambapps.fft4j.FastFouriers
 import it.unipi.masss.classifiertest.R
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import org.apache.commons.math3.complex.Complex
 import org.apache.commons.math3.transform.DftNormalization
@@ -23,6 +24,9 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation
 import org.jtransforms.fft.FloatFFT_1D
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.serializer
+
 @Serializable
 data class GestureData(
     val timestamps: List<String>,
@@ -52,6 +56,24 @@ class MainActivity : ComponentActivity() {
 
         return result.toTypedArray()
     }
+
+    @Serializable
+    data class FeatureData(
+        val features: List<Float>,
+        val label: String
+    )
+    fun saveFeaturesToJson(context: Context, data: List<FeatureData>) {
+        val json = Json { prettyPrint = true }
+        // Explicitly use ListSerializer for FeatureData
+        val jsonString = json.encodeToString(ListSerializer(FeatureData.serializer()), data)
+
+        context.openFileOutput("features.json", Context.MODE_PRIVATE).use {
+            println("Saving on file")
+            it.write(jsonString.toByteArray())
+        }
+    }
+
+
     fun calculateCorrelations(xFeatures: FloatArray, yFeatures: FloatArray, zFeatures: FloatArray): List<Float> {
         val features = mutableListOf<Float>()
         val mAxisData = arrayOf(xFeatures, yFeatures, zFeatures)
@@ -126,40 +148,39 @@ class MainActivity : ComponentActivity() {
     fun extractFrequencyFeatures(data: FloatArray): FloatArray {
         val n = data.size
         val fft = FloatFFT_1D(n.toLong())
-
-        // JTransforms requires a double-sized array for real input to store complex outputs.
-        val fftData = FloatArray(n)  // Directly use the data array if not modifying original data.
+        val fftData = FloatArray(n)  // This will hold the FFT result
         System.arraycopy(data, 0, fftData, 0, n)
 
-        // Perform the FFT in place for real data
+        // Perform the FFT in place
         fft.realForward(fftData)
 
         // Calculate spectral energy
         var spectralEnergy = 0.0
         var totalMagnitude = 0.0
-        val freqs = FloatArray(n/2) { it * 1.0f / n }
+        val freqs = FloatArray(n / 2) { it * 1.0f / n }
 
-        for (i in 0 until n/2) {
-            val re = fftData[2*i]   // Real part
-            val im = if (i == 0 || 2*i == n - 1) 0.0f else fftData[2*i + 1] // Imaginary part
-            val mag = re*re + im*im
+        for (i in 0 until n / 2) {
+            val re = fftData[2 * i]  // Real part
+            val im = if (i == 0 || 2 * i == n - 1) 0.0f else fftData[2 * i + 1] // Imaginary part
+            val mag = re * re + im * im
             spectralEnergy += mag
             totalMagnitude += Math.sqrt(mag.toDouble())
         }
-        spectralEnergy /= n
+        spectralEnergy /= n // Normalize by the number of points
 
         // Calculate spectral centroid
         var spectralCentroid = 0.0
-        for (i in 0 until n/2) {
-            val re = fftData[2*i]
-            val im = if (i == 0 || 2*i == n - 1) 0.0f else fftData[2*i + 1]
-            val mag = Math.sqrt((re*re + im*im).toDouble())
+        for (i in 0 until n / 2) {
+            val re = fftData[2 * i]
+            val im = if (i == 0 || 2 * i == n - 1) 0.0f else fftData[2 * i + 1]
+            val mag = Math.sqrt((re * re + im * im).toDouble())
             spectralCentroid += freqs[i] * mag
         }
-        spectralCentroid /= totalMagnitude
-
-        return floatArrayOf(spectralEnergy.toFloat() * 2, spectralCentroid.toFloat())
+        spectralCentroid /= totalMagnitude // Normalized magnitude for centroid calculation
+        return floatArrayOf((spectralEnergy * 2.0).toFloat()  , spectralCentroid.toFloat())
     }
+
+
 
     fun FloatArray.standardDeviation(): Double {
         val mean = this.average()
@@ -196,7 +217,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // This method performs a single prediction
-    fun retrievePredictionAndConfidence(inputFeatures: FloatArray, numFeatures: Int, threshold: Float = 0.99f) : Pair<String, Float> {
+    fun retrievePredictionAndConfidence(inputFeatures: FloatArray, numFeatures: Int, threshold: Float = 1.0f) : Pair<String, Float> {
 
         // Creating an ortEnvironment
         val ortEnvironment = OrtEnvironment.getEnvironment()
@@ -216,7 +237,7 @@ class MainActivity : ComponentActivity() {
 
         val prediction : String
         if(confidence < threshold){
-            prediction = "No Gesture"
+            prediction = "Other"
         } else {
             prediction = predictionVector[0]
         }
@@ -226,7 +247,8 @@ class MainActivity : ComponentActivity() {
 
     fun main() {
         // Load data
-        val gestureData = loadData(this,R.raw.labeled_data_circle) + loadData(this, R.raw.labeled_data_clap) + loadData(this, R.raw.labeled_data_random)
+        val gestureData = loadData(this,R.raw.labeled_data_circle)+ loadData(this, R.raw.labeled_data_clap) + loadData(this, R.raw.labeled_data_random)
+        val allFeatureData = mutableListOf<FeatureData>()
         // Process each gesture to extract features
         gestureData.forEach { gesture ->
             val xFeatures = extractFeatures(gesture.xTimeSeries.toFloatArray())
@@ -239,8 +261,8 @@ class MainActivity : ComponentActivity() {
                         gesture.yTimeSeries.toFloatArray(),
                         gesture.zTimeSeries.toFloatArray()
                     )
-
-            // println("allFeatures: $allFeatures")
+            allFeatureData.add(FeatureData(allFeatures, gesture.label))
+            //println("allFeatures: $allFeatures")
             // println("True class: ${gesture.label}:")
             val (prediction, confidence) = retrievePredictionAndConfidence(allFeatures.toFloatArray(), allFeatures.size)
             println("Predicted: $prediction, Actual: ${gesture.label}, with confidence: $confidence")
@@ -252,6 +274,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        saveFeaturesToJson(this, allFeatureData)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
