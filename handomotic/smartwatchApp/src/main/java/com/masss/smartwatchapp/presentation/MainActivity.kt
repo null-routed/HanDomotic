@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
     private val LOG_TAG: String = "HanDomotic"
 
     // Defining how many sample to drop from a call to the classifier to another
-    private val classificationFrequency: Int = 2
+    private val classificationFrequency: Int = 3
 
     // Defining the length of the windowing buffer array
     private val bufferSize: Int = 50
