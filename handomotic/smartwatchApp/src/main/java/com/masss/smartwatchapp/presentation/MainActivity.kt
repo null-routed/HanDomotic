@@ -22,7 +22,7 @@ class MainActivity : AppCompatActivity() {
 
     private val tag: String = "HanDomotic"
     // Defining how many sample to drop from a call to the classifer to another
-    private val classificationFrequency: Int = 5
+    private val classificationFrequency: Int = 100
     // Defining the lenght of the windowing buffer array
     private val bufferSize: Int = 200
     private var counter: Int = 0
@@ -101,6 +101,7 @@ class MainActivity : AppCompatActivity() {
                             )
                 Log.i("ALL_FEATURES", allFeatures.joinToString(", "))
                 counter = 0
+                broadcastFeatures(allFeatures)
             }
         }
     }
