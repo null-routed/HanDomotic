@@ -52,6 +52,8 @@ android {
 }
 
 dependencies {
+    implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
+
     implementation(libs.play.services.wearable)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -65,6 +67,7 @@ dependencies {
     implementation(libs.commons.math3)
     implementation(libs.jtransforms)
     implementation(libs.onnxruntime.android)
+    implementation(libs.androidx.constraintlayout)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)

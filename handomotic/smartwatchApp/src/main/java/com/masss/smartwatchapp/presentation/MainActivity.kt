@@ -20,13 +20,16 @@ import java.util.LinkedList
 
 class MainActivity : AppCompatActivity() {
 
-    private val tag: String = "HanDomotic"
-    // Defining how many sample to drop from a call to the classifer to another
-    private val classificationFrequency: Int = 100
-    // Defining the lenght of the windowing buffer array
-    private val bufferSize: Int = 200
+    private val LOG_TAG: String = "HanDomotic"
+
+    // Defining how many sample to drop from a call to the classifier to another
+    private val classificationFrequency: Int = 2
+
+    // Defining the length of the windowing buffer array
+    private val bufferSize: Int = 50
     private var counter: Int = 0
 
+    // Tracker for the app state
     private var appIsRecording: Boolean = false
 
     private val requiredPermissions = arrayOf(
@@ -36,12 +39,6 @@ class MainActivity : AppCompatActivity() {
         android.Manifest.permission.ACCESS_COARSE_LOCATION,
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
-
-    // Not needed
-    private val xTimeSeries = mutableListOf<Float>()
-    private var yTimeSeries = mutableListOf<Float>()
-    private var zTimeSeries = mutableListOf<Float>()
-    private var recordingTimestamps = mutableListOf<Long>()
 
     /* Windowing buffering arrays */
     private val xWindow : LinkedList<Float> = LinkedList()
@@ -71,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         for(i in 0 until featuresList.size){
             intent.putExtra("feature_$i", featuresList.get(i))
         }
+        Log.d(LOG_TAG, "Sending features to the classifier...")
         sendBroadcast(intent)
     }
 
@@ -82,13 +80,13 @@ class MainActivity : AppCompatActivity() {
             val timestamp = intent?.getLongExtra("timestamp", 0)
 
             if (xValue != null && yValue != null && zValue != null && timestamp != null) {
-                Log.d(tag, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
+                // Log.d(LOG_TAG, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
                 // Makes the window slide: writes in xWindow, yWindow, zWindow
                 addSample(xValue, yValue, zValue)
             }
             if(counter < classificationFrequency)
                 counter++
-            else{
+            else{           // every 'classificationFrequency' samples features get extracted and sent to the classifier
                 val xFeatures = FeatureExtractor.extractFeatures(xWindow.toFloatArray())
                 val yFeatures = FeatureExtractor.extractFeatures(yWindow.toFloatArray())
                 val zFeatures = FeatureExtractor.extractFeatures(zWindow.toFloatArray())
@@ -110,11 +108,27 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        //TODO: show app name following device's screen curvature ?
-        val mainButton: Button = findViewById<Button>(R.id.mainButton)
-        mainButton.text = resources.getString(R.string.start)
+        // setting up onclick listeners on activity creation
+        val mainButton: Button = findViewById(R.id.mainButton)
+        mainButton.setOnClickListener() {
+            if (appIsRecording) {
+                Log.d(LOG_TAG, "Clicked. Stopping all main functionalities...")
+                stopAppServices()
+            } else {
+                Log.d(LOG_TAG, "Clicked. Starting all main functionalities...")
+                startAppServices()
+            }
+            toggleButtonBackground(mainButton)
+        }
 
         checkAndRequestPermissions()
+    }
+
+    private fun toggleButtonBackground(button: Button) {
+        if (appIsRecording)
+            button.background = ContextCompat.getDrawable(this, R.drawable.power_off)
+        else
+            button.background = ContextCompat.getDrawable(this, R.drawable.power_on)
     }
 
 
@@ -140,38 +154,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onAllPermissionsGranted() {
-        val mainButton: Button = findViewById<Button>(R.id.mainButton)
         svmClassifier = SVMClassifier(this)
-        // setup onclick listeners
-        /*
-        TODO:
-            -> if app is working, onclick makes it stop
-            -> if app is not working, onclick makes it start
-         */
-        mainButton.setOnClickListener() {
-            if (appIsRecording) {
-                Log.d(tag, "Clicked. Stopping all main functionalities...")
-                mainButton.text = resources.getString(R.string.stop)
-                stopAppServices()
-            } else {
-                Log.d(tag, "Clicked. Starting all main functionalities...")
-                mainButton.text = resources.getString(R.string.start)
-                startAppServices()
-            }
-        }
-    }
-
-    private fun logAllTimeSeries() {
-        Log.d("TIME_SERIES", "X: $xTimeSeries")
-        Log.d("TIME_SERIES", "Y: $xTimeSeries")
-        Log.d("TIME_SERIES", "Z: $xTimeSeries")
     }
 
     override fun onResume() {
         super.onResume()
-        registerReceiver(accelerometerReceiver, IntentFilter("AccelerometerData"),
-            RECEIVER_EXPORTED)
-        Log.d(tag, "An accelerometer receiver has been registered.")
+        // Registering accelerometer receiver
+        registerReceiver(accelerometerReceiver, IntentFilter("AccelerometerData"), RECEIVER_EXPORTED)
+        Log.d(LOG_TAG, "An accelerometer receiver has been registered.")
+
         // Registering SVM BroadcastReceiver
         svmClassifier.registerReceiver()
     }
@@ -182,7 +173,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Started data gathering...", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
-        Log.d(tag, "Started accelerometer data gathering")
+        Log.d(LOG_TAG, "Started accelerometer data gathering")
     }
 
     private fun stopAppServices() {
@@ -191,10 +182,9 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Stopped data gathering.", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         stopService(accelRecordingIntent)
-        Log.d(tag, "Stopped accelerometer data gathering")
+        Log.d(LOG_TAG, "Stopped accelerometer data gathering")
 
         // stop classifier
-        super.onPause()
         svmClassifier.unregisterReceiver()
     }
 

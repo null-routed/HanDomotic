@@ -12,7 +12,7 @@ import android.util.Log
 
 class AccelerometerRecordingService : Service() {
 
-    private var logTag: String = "HanDomotic@AccelerometerRecordingService"
+    private var LOG_TAG: String = "HanDomotic@AccelerometerRecordingService"
 
     private lateinit var sensorManager: SensorManager
     private var accelerometerSensor: Sensor? = null
@@ -22,18 +22,18 @@ class AccelerometerRecordingService : Service() {
     private var lastZValue: Float = 0f
 
     override fun onCreate() {
-        Log.d(logTag, "Recording service has started.")
+        Log.d(LOG_TAG, "Recording service has started.")
         super.onCreate()
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        Log.d(logTag, "Obtained an accelerometer reference: " + accelerometerSensor.toString())
+        Log.d(LOG_TAG, "Obtained an accelerometer reference: " + accelerometerSensor.toString())
 
         startRecording()
     }
 
     override fun onDestroy() {
-        Log.d(logTag, "RecordingService has stopped.")
+        Log.d(LOG_TAG, "RecordingService has stopped.")
         stopRecording()         // stop recording data before destroying the service
         super.onDestroy()
     }
