@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
+import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import java.util.LinkedList
 
 
@@ -47,6 +48,9 @@ class MainActivity : AppCompatActivity() {
     private val yWindow: LinkedList<Float> = LinkedList()
     private val zWindow: LinkedList<Float> = LinkedList()
 
+    /* Classifier*/
+    private lateinit var svmClassifier: SVMClassifier
+
     // From the index 0 to the index numListeningSamples - 1 we have the incoming samples
     // From the index numListeningSamples to the end we have the old samples
     private fun addSample(xValue: Float, yValue: Float, zValue: Float){
@@ -59,6 +63,15 @@ class MainActivity : AppCompatActivity() {
         xWindow.addLast(xValue)
         yWindow.addLast(yValue)
         zWindow.addLast(zValue)
+    }
+
+    // Broadcasts features to the classifier
+    private fun broadcastFeatures(featuresList: List<Float>){
+        val intent = Intent("FeatureList")
+        for(i in 0 until featuresList.size){
+            intent.putExtra("feature_$i", featuresList.get(i))
+        }
+        sendBroadcast(intent)
     }
 
     private val accelerometerReceiver = object : BroadcastReceiver() {
@@ -127,7 +140,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun onAllPermissionsGranted() {
         val mainButton: Button = findViewById<Button>(R.id.mainButton)
-
+        svmClassifier = SVMClassifier(this)
         // setup onclick listeners
         /*
         TODO:
@@ -158,6 +171,8 @@ class MainActivity : AppCompatActivity() {
         registerReceiver(accelerometerReceiver, IntentFilter("AccelerometerData"),
             RECEIVER_EXPORTED)
         Log.d(tag, "An accelerometer receiver has been registered.")
+        // Registering SVM BroadcastReceiver
+        svmClassifier.registerReceiver()
     }
 
     private fun startAppServices() {
@@ -178,6 +193,8 @@ class MainActivity : AppCompatActivity() {
         Log.d(tag, "Stopped accelerometer data gathering")
 
         // stop classifier
+        super.onPause()
+        svmClassifier.unregisterReceiver()
     }
 
     private fun onPermissionsDenied() {

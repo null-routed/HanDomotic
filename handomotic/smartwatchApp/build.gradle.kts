@@ -64,6 +64,7 @@ dependencies {
     implementation(libs.sdk)
     implementation(libs.commons.math3)
     implementation(libs.jtransforms)
+    implementation(libs.onnxruntime.android)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
