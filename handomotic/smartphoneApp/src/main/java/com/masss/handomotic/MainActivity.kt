@@ -51,7 +51,6 @@ class MainActivity : ComponentActivity() {
         beaconManager = BTBeaconManager(this)
         beaconManager.stopScanning()
 
-        // if user pres R.id.start_stop_scanning call startScanning() or stopScanning() like a switch
         binding.scanningSwitch.setOnClickListener {
             if (beaconManager.isScanning()) {
                 Log.i(TAG, "Stop scanning")
