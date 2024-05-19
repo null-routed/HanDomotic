@@ -6,4 +6,6 @@
     -->
     <string name="start">START</string>
     <string name="stop">STOP</string>
+    <string name="accept_movement_data">Let app access movement data?</string>
+    <string name="accept_location_data">Let app access location data?</string>
 </resources>

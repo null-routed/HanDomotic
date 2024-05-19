@@ -7,15 +7,21 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
+import androidx.wear.compose.material.Switch
 import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import java.util.LinkedList
+import android.widget.Switch
+import androidx.compose.animation.core.animateDecay
 
 
 class MainActivity : AppCompatActivity() {
@@ -79,11 +85,9 @@ class MainActivity : AppCompatActivity() {
             val zValue = intent?.getFloatExtra("zValue", 0f)
             val timestamp = intent?.getLongExtra("timestamp", 0)
 
-            if (xValue != null && yValue != null && zValue != null && timestamp != null) {
-                // Log.d(LOG_TAG, "At $timestamp -> X: $xValue \t Y: $yValue \t Z: $zValue")
-                // Makes the window slide: writes in xWindow, yWindow, zWindow
-                addSample(xValue, yValue, zValue)
-            }
+            if (xValue != null && yValue != null && zValue != null && timestamp != null)
+                addSample(xValue, yValue, zValue)       // Makes the window slide: writes in xWindow, yWindow, zWindow
+
             if(counter < classificationFrequency)
                 counter++
             else{           // every 'classificationFrequency' samples features get extracted and sent to the classifier
@@ -108,19 +112,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // setting up onclick listeners on activity creation
-        val mainButton: Button = findViewById(R.id.mainButton)
-        mainButton.setOnClickListener() {
-            if (appIsRecording) {
-                Log.d(LOG_TAG, "Clicked. Stopping all main functionalities...")
-                stopAppServices()
-            } else {
-                Log.d(LOG_TAG, "Clicked. Starting all main functionalities...")
-                startAppServices()
-            }
-            toggleButtonBackground(mainButton)
-        }
-
         checkAndRequestPermissions()
     }
 
@@ -132,13 +123,18 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    private fun requestPermission(permission: String) {
+        requestPermissionsLauncher.launch(arrayOf(permission))
+    }
+
     private fun checkAndRequestPermissions() {
+        Log.d(LOG_TAG, "Called checkAndRequestPermissions()")
         val permissionsToBeRequested = requiredPermissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
 
         if (permissionsToBeRequested.isNotEmpty())
-            requestPermissionsLauncher.launch(permissionsToBeRequested.toTypedArray())
+             requestPermissionsLauncher.launch(permissionsToBeRequested.toTypedArray())
         else
             onAllPermissionsGranted()
     }
@@ -146,25 +142,102 @@ class MainActivity : AppCompatActivity() {
     private val requestPermissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val allPermissionsGranted = permissions.entries.all { it.value }
-        if (allPermissionsGranted)
+        Log.d(LOG_TAG, "Called requestPermissionsLauncher()")
+        val deniedPermissions = permissions.filter { !it.value }.keys
+        if (deniedPermissions.isEmpty())
             onAllPermissionsGranted()
-        else
-            onPermissionsDenied()
+        else {
+            onPermissionsDenied(deniedPermissions)
+            setupPermissionsPanel()         // Update permission panel after requesting permissions
+        }
     }
 
-    private fun onAllPermissionsGranted() {
-        svmClassifier = SVMClassifier(this)
+    private fun setupPermissionsPanel() {
+        val permissionPanel = findViewById<LinearLayout>(R.id.permissionPanel)
+        val permissionList = findViewById<LinearLayout>(R.id.permissionList)
+
+        val permissionsToBeGranted = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        permissionList.removeAllViews()
+
+//        android.permission.ACCESS_FINE_LOCATION
+
+        val locationSwitchAlreadyDisplayed: Boolean = false
+        permissionsToBeGranted.forEach { permission ->
+            // Log.d(LOG_TAG, "PERMISSION YET TO BE GRANTED: $permission")
+            if (permission == android.Manifest.permission.BODY_SENSORS) {       // TODO: function to add switches to avoid duplicate code
+                val permissionSwitch = Switch(this)
+                permissionSwitch.text = getString(R.string.accept_movement_data)
+                permissionSwitch.isChecked = false
+                permissionList.addView(permissionSwitch)
+
+                permissionSwitch.setOnCheckedChangeListener { _, isChecked ->
+                    if (isChecked) {
+                        requestPermission(permission)
+                    }
+                }
+            }
+
+            if ((permission == android.Manifest.permission.ACCESS_COARSE_LOCATION || permission == android.Manifest.permission.ACCESS_FINE_LOCATION)
+                && !locationSwitchAlreadyDisplayed) {
+                val permissionSwitch = Switch(this)
+                permissionSwitch.text = getString(R.string.accept_location_data)
+                permissionSwitch.isChecked = false
+                permissionList.addView(permissionSwitch)
+
+                permissionSwitch.setOnCheckedChangeListener { _, isChecked ->
+                    if (isChecked) {
+                        requestPermission(permission)
+                    }
+                }
+            }
+        }
+
+        permissionPanel.visibility = if (permissionsToBeGranted.isNotEmpty()) View.VISIBLE else View.GONE
     }
 
     override fun onResume() {
         super.onResume()
-        // Registering accelerometer receiver
-        registerReceiver(accelerometerReceiver, IntentFilter("AccelerometerData"), RECEIVER_EXPORTED)
-        Log.d(LOG_TAG, "An accelerometer receiver has been registered.")
+        if (allPermissionsGranted()) {
+            // Registering accelerometer receiver
+            registerReceiver(
+                accelerometerReceiver,
+                IntentFilter("AccelerometerData"),
+                RECEIVER_EXPORTED
+            )
+            Log.d(LOG_TAG, "An accelerometer receiver has been registered.")
 
-        // Registering SVM BroadcastReceiver
-        svmClassifier.registerReceiver()
+            // Registering SVM BroadcastReceiver
+            svmClassifier.registerReceiver()
+        }
+    }
+
+    private fun allPermissionsGranted(): Boolean {
+        return requiredPermissions.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun onAllPermissionsGranted() {
+        Log.d(LOG_TAG, "Called onAllPermissionsGranted()")
+
+        // initializing the classifier
+        svmClassifier = SVMClassifier(this)
+
+        // setting up onclick listeners on activity creation
+        val mainButton: Button = findViewById(R.id.mainButton)
+        mainButton.setOnClickListener {
+            if (appIsRecording) {
+                Log.d(LOG_TAG, "Clicked. Stopping all main functionalities...")
+                stopAppServices()
+            } else {
+                Log.d(LOG_TAG, "Clicked. Starting all main functionalities...")
+                startAppServices()
+            }
+            toggleButtonBackground(mainButton)
+        }
     }
 
     private fun startAppServices() {
@@ -188,11 +261,21 @@ class MainActivity : AppCompatActivity() {
         svmClassifier.unregisterReceiver()
     }
 
-    private fun onPermissionsDenied() {
-        /*
-        TODO: make msg appear saying what are the permissions still needed
-            for the app to work
-            Show button to request those missing permissions
-        */
+    private fun onPermissionsDenied(deniedPermissions: Set<String>) {
+        Log.d(LOG_TAG, "Called onPermissionsDenied()")
+        Toast.makeText(this, "One or more necessary permissions have been denied. App functionalities may be limited.", Toast.LENGTH_LONG).show()
+
+        val deniedPermissionsString = deniedPermissions.joinToString(", ")
+        Log.d(LOG_TAG, "Denied permissions: $deniedPermissionsString")
+
+        val mainButton: Button = findViewById(R.id.mainButton)
+        mainButton.isEnabled = false
+        mainButton.background = ContextCompat.getDrawable(this, R.drawable.power_disabled)
+        mainButton.setOnClickListener {
+            Toast.makeText(this, "Some permissions need to be accepted to use the app.", Toast.LENGTH_LONG).show()
+        }
+
+
     }
+
 }
