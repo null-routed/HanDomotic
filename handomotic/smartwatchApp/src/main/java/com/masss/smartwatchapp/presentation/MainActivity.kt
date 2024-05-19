@@ -7,26 +7,26 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
+import androidx.wear.compose.material.Switch
 import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import java.util.LinkedList
+import android.widget.Switch
+import androidx.compose.animation.core.animateDecay
 
 
 class MainActivity : AppCompatActivity() {
 
     private val LOG_TAG: String = "HanDomotic"
-
-    companion object {
-        private const val PERMISSIONS_REQUEST_CODE = 100
-    }
 
     // Defining how many sample to drop from a call to the classifier to another
     private val classificationFrequency: Int = 3
@@ -122,6 +122,11 @@ class MainActivity : AppCompatActivity() {
             button.background = ContextCompat.getDrawable(this, R.drawable.power_on)
     }
 
+
+    private fun requestPermission(permission: String) {
+        requestPermissionsLauncher.launch(arrayOf(permission))
+    }
+
     private fun checkAndRequestPermissions() {
         Log.d(LOG_TAG, "Called checkAndRequestPermissions()")
         val permissionsToBeRequested = requiredPermissions.filter {
@@ -143,7 +148,54 @@ class MainActivity : AppCompatActivity() {
             onAllPermissionsGranted()
         else {
             onPermissionsDenied(deniedPermissions)
+            setupPermissionsPanel()         // Update permission panel after requesting permissions
         }
+    }
+
+    private fun setupPermissionsPanel() {
+        val permissionPanel = findViewById<LinearLayout>(R.id.permissionPanel)
+        val permissionList = findViewById<LinearLayout>(R.id.permissionList)
+
+        val permissionsToBeGranted = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        permissionList.removeAllViews()
+
+//        android.permission.ACCESS_FINE_LOCATION
+
+        val locationSwitchAlreadyDisplayed: Boolean = false
+        permissionsToBeGranted.forEach { permission ->
+            // Log.d(LOG_TAG, "PERMISSION YET TO BE GRANTED: $permission")
+            if (permission == android.Manifest.permission.BODY_SENSORS) {       // TODO: function to add switches to avoid duplicate code
+                val permissionSwitch = Switch(this)
+                permissionSwitch.text = getString(R.string.accept_movement_data)
+                permissionSwitch.isChecked = false
+                permissionList.addView(permissionSwitch)
+
+                permissionSwitch.setOnCheckedChangeListener { _, isChecked ->
+                    if (isChecked) {
+                        requestPermission(permission)
+                    }
+                }
+            }
+
+            if ((permission == android.Manifest.permission.ACCESS_COARSE_LOCATION || permission == android.Manifest.permission.ACCESS_FINE_LOCATION)
+                && !locationSwitchAlreadyDisplayed) {
+                val permissionSwitch = Switch(this)
+                permissionSwitch.text = getString(R.string.accept_location_data)
+                permissionSwitch.isChecked = false
+                permissionList.addView(permissionSwitch)
+
+                permissionSwitch.setOnCheckedChangeListener { _, isChecked ->
+                    if (isChecked) {
+                        requestPermission(permission)
+                    }
+                }
+            }
+        }
+
+        permissionPanel.visibility = if (permissionsToBeGranted.isNotEmpty()) View.VISIBLE else View.GONE
     }
 
     override fun onResume() {
@@ -174,7 +226,18 @@ class MainActivity : AppCompatActivity() {
         // initializing the classifier
         svmClassifier = SVMClassifier(this)
 
-        setupMainButton()       // setting onclick listeners
+        // setting up onclick listeners on activity creation
+        val mainButton: Button = findViewById(R.id.mainButton)
+        mainButton.setOnClickListener {
+            if (appIsRecording) {
+                Log.d(LOG_TAG, "Clicked. Stopping all main functionalities...")
+                stopAppServices()
+            } else {
+                Log.d(LOG_TAG, "Clicked. Starting all main functionalities...")
+                startAppServices()
+            }
+            toggleButtonBackground(mainButton)
+        }
     }
 
     private fun startAppServices() {
@@ -184,29 +247,6 @@ class MainActivity : AppCompatActivity() {
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
         Log.d(LOG_TAG, "Started accelerometer data gathering")
-    }
-
-    private fun setupMainButton() {
-        val mainButton: Button = findViewById(R.id.mainButton)
-        if (allPermissionsGranted()) {
-            mainButton.isEnabled = true
-            mainButton.setOnClickListener {
-                if (appIsRecording) {
-                    Log.d(LOG_TAG, "Clicked. Stopping all main functionalities...")
-                    stopAppServices()
-                } else {
-                    Log.d(LOG_TAG, "Clicked. Starting all main functionalities...")
-                    startAppServices()
-                }
-                toggleButtonBackground(mainButton)
-            }
-        } else {
-            mainButton.isEnabled = false
-            mainButton.background = ContextCompat.getDrawable(this, R.drawable.power_disabled)
-            mainButton.setOnClickListener {
-                Toast.makeText(this, "Some permissions need to be accepted to use the app.", Toast.LENGTH_LONG).show()
-            }
-        }
     }
 
     private fun stopAppServices() {
@@ -225,28 +265,17 @@ class MainActivity : AppCompatActivity() {
         Log.d(LOG_TAG, "Called onPermissionsDenied()")
         Toast.makeText(this, "One or more necessary permissions have been denied. App functionalities may be limited.", Toast.LENGTH_LONG).show()
 
-        // setup side swipe-right activity
-        val scrollView = findViewById<HorizontalScrollView>(R.id.scrollView)
-        val mainLayout = findViewById<LinearLayout>(R.id.mainLayout)
-        mainLayout.setOnClickListener {
-            if (scrollView.scrollX == (scrollView.getChildAt(0).measuredWidth - scrollView.measuredWidth)) {
-                val permissionsActivityIntent = Intent(this, PermissionsActivity::class.java)
-                permissionsActivityIntent.putExtra("denied_permissions", deniedPermissions.toTypedArray())
-                startActivityForResult(permissionsActivityIntent, PERMISSIONS_REQUEST_CODE)
-            }
-        }
-
         val deniedPermissionsString = deniedPermissions.joinToString(", ")
         Log.d(LOG_TAG, "Denied permissions: $deniedPermissionsString")
 
-        setupMainButton()       // make it disabled, make it show toast on click
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PERMISSIONS_REQUEST_CODE && resultCode == RESULT_OK) {
-            setupMainButton()
+        val mainButton: Button = findViewById(R.id.mainButton)
+        mainButton.isEnabled = false
+        mainButton.background = ContextCompat.getDrawable(this, R.drawable.power_disabled)
+        mainButton.setOnClickListener {
+            Toast.makeText(this, "Some permissions need to be accepted to use the app.", Toast.LENGTH_LONG).show()
         }
+
+
     }
 
 }
