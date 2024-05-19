@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">HanDomotic</string>
+    <string name="StartStopScanning">START / STOP\nSCANNING</string>
 </resources>

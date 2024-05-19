@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,6 +34,7 @@ import com.masss.handomotic.databinding.HomeBinding
 
 class MainActivity : ComponentActivity() {
     private lateinit var binding: HomeBinding
+    private lateinit var beaconManager: BTBeaconManager
 
     companion object {
         const val REQUEST_CODE_PERMISSIONS: Int = 100
@@ -44,6 +47,38 @@ class MainActivity : ComponentActivity() {
         binding = DataBindingUtil.setContentView(this, R.layout.home)
         binding.greeting.text = "Wake up, samurai!"
         checkPermissions()
+
+        beaconManager = BTBeaconManager(this)
+        beaconManager.stopScanning()
+
+        // if user pres R.id.start_stop_scanning call startScanning() or stopScanning() like a switch
+        binding.scanningSwitch.setOnClickListener {
+            if (beaconManager.isScanning()) {
+                Log.i(TAG, "Stop scanning")
+                binding.greeting.text = "Not scanning"
+                binding.scanningProgress.visibility = View.GONE
+                beaconManager.stopScanning()
+            } else {
+                Log.i(TAG, "Start scanning")
+                binding.greeting.text = "Scanning..."
+                binding.scanningProgress.visibility = View.VISIBLE
+                beaconManager.startScanning()
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+    }
+
+    override fun onStop() {
+        beaconManager.stopScanning()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        beaconManager.destroy()
+        super.onDestroy()
     }
 
     private fun checkPermissions() {
@@ -72,4 +107,5 @@ class MainActivity : ComponentActivity() {
         }
         return false
     }
+
 }
