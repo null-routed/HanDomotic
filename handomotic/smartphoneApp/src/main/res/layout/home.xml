@@ -13,8 +13,9 @@
             android:id="@+id/greeting"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="112dp"
+            android:layout_marginTop="80dp"
             android:lineSpacingExtra="12sp"
+            android:text="Greetings"
             android:textSize="34sp"
             android:textStyle="bold|italic"
             app:layout_constraintEnd_toEndOf="parent"
@@ -25,10 +26,10 @@
             android:id="@+id/scanning_switch"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="304dp"
+            android:layout_marginTop="428dp"
             android:text="@string/StartStopScanning"
-            app:layout_constraintEnd_toEndOf="@+id/greeting"
-            app:layout_constraintStart_toStartOf="@+id/greeting"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/greeting" />
 
         <ProgressBar
@@ -36,12 +37,24 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginTop="128dp"
+            android:layout_marginTop="28dp"
             android:visibility="gone"
-            app:layout_constraintEnd_toEndOf="@+id/greeting"
-            app:layout_constraintHorizontal_bias="0.52"
-            app:layout_constraintStart_toStartOf="@+id/greeting"
-            app:layout_constraintTop_toBottomOf="@+id/greeting" />
+            app:layout_constraintEnd_toEndOf="@+id/scanning_switch"
+            app:layout_constraintHorizontal_bias="0.522"
+            app:layout_constraintStart_toStartOf="@+id/scanning_switch"
+            app:layout_constraintTop_toBottomOf="@+id/scanning_switch" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/beacons_recycler"
+            android:layout_width="409dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="50dp"
+            app:layout_constraintBottom_toTopOf="@+id/scanning_switch"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/greeting"
+            app:layout_constraintVertical_bias="0.06999999" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

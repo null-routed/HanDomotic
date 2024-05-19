@@ -4,41 +4,31 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
-import com.masss.handomotic.ui.theme.HanDomoticTheme
-import com.kontakt.sdk.android.ble.configuration.ScanMode
-import com.kontakt.sdk.android.ble.configuration.ScanPeriod
-import com.kontakt.sdk.android.ble.connection.OnServiceReadyListener
-import com.kontakt.sdk.android.ble.manager.ProximityManager
-import com.kontakt.sdk.android.ble.manager.ProximityManagerFactory
-import com.kontakt.sdk.android.ble.manager.listeners.IBeaconListener
-import com.kontakt.sdk.android.ble.rssi.RssiCalculators
-import com.kontakt.sdk.android.common.KontaktSDK
-import com.kontakt.sdk.android.common.profile.IBeaconDevice
-import com.kontakt.sdk.android.common.profile.IBeaconRegion
+import androidx.recyclerview.widget.RecyclerView
 import com.masss.handomotic.databinding.HomeBinding
 
 class MainActivity : ComponentActivity() {
     private lateinit var binding: HomeBinding
     private lateinit var beaconManager: BTBeaconManager
 
+    private lateinit var updateHandler: Handler
+    private lateinit var updateRunnable: Runnable
+
     companion object {
         const val REQUEST_CODE_PERMISSIONS: Int = 100
-        const val TAG = "MainActivity"
+        const val TAG = "BTBeaconManager"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,8 +38,18 @@ class MainActivity : ComponentActivity() {
         binding.greeting.text = "Wake up, samurai!"
         checkPermissions()
 
+        // create the beacon manager instance for Bluetooth scanning
         beaconManager = BTBeaconManager(this)
         beaconManager.stopScanning()
+
+        // set up the recycler view
+        updateHandler = Handler(Looper.getMainLooper())
+        updateRunnable = Runnable {
+            // Update the RecyclerView
+            updateRecyclerView()
+            // Schedule the next update
+            updateHandler.postDelayed(updateRunnable, 1000) // Aggiorna ogni secondo
+        }
 
         binding.scanningSwitch.setOnClickListener {
             if (beaconManager.isScanning()) {
@@ -57,13 +57,23 @@ class MainActivity : ComponentActivity() {
                 binding.greeting.text = "Not scanning"
                 binding.scanningProgress.visibility = View.GONE
                 beaconManager.stopScanning()
+                updateHandler.removeCallbacks(updateRunnable)
             } else {
                 Log.i(TAG, "Start scanning")
                 binding.greeting.text = "Scanning..."
                 binding.scanningProgress.visibility = View.VISIBLE
                 beaconManager.startScanning()
+                updateHandler.post(updateRunnable)
             }
         }
+    }
+
+    private fun updateRecyclerView() {
+        // Obtain the updated list of beacons
+        val beacons = beaconManager.getBeacons()
+        // Update the adapter of the RecyclerView
+        binding.beaconsRecycler.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        binding.beaconsRecycler.adapter = BeaconsAdapter(beacons)
     }
 
     override fun onStart() {
@@ -106,5 +116,46 @@ class MainActivity : ComponentActivity() {
         }
         return false
     }
+
+    class BeaconsAdapter(private val beaconsList: List<Beacon>) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
+        class BeaconsHolder(private val row: View) : RecyclerView.ViewHolder(row) {
+            val beaconAddress: TextView = row.findViewById(R.id.beacon_address)
+            val beaconUuid: TextView = row.findViewById(R.id.beacon_uuid)
+            val beaconRssi: TextView = row.findViewById(R.id.beacon_rssi)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BeaconsHolder {
+            val layout = LayoutInflater.from(parent.context).inflate(R.layout.beacon_item, parent, false)
+            return BeaconsHolder(layout)
+        }
+
+        override fun onBindViewHolder(holder: BeaconsHolder, position: Int) {
+            holder.beaconAddress.text = beaconsList[position].address
+            holder.beaconUuid.text = beaconsList[position].id
+            holder.beaconRssi.text = beaconsList[position].rssi.toString()
+        }
+
+        override fun getItemCount(): Int = beaconsList.size
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 }

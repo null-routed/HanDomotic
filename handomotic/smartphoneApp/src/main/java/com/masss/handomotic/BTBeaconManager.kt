@@ -30,7 +30,7 @@ class BTBeaconManager(private val context: Context) {
      * @return the list of beacons sorted by rssi.
      */
     fun getBeacons(): List<Beacon> {
-        return beaconsList.sortedBy { it.rssi }
+        return beaconsList.sortedBy { it.rssi * -1 }
     }
 
     /**
@@ -42,12 +42,12 @@ class BTBeaconManager(private val context: Context) {
     }
 
     private fun removeBeacon(beacon: IBeaconDevice) {
-        beaconsList.removeIf { it.id == beacon.uniqueId }
+        beaconsList.removeIf { it.address == beacon.address && it.id == beacon.uniqueId }
     }
 
     // TODO: può essere migliorato evitando di scansionare
     private fun setRssi(beacon: IBeaconDevice) {
-        beaconsList[beaconsList.indexOfFirst { it.id == beacon.uniqueId }].rssi = beacon.rssi.toDouble()
+        beaconsList[beaconsList.indexOfFirst { it.address == beacon.address && it.id == beacon.uniqueId }].rssi = beacon.rssi.toDouble()
     }
 
     private fun setupProximityManager() {
@@ -89,11 +89,15 @@ class BTBeaconManager(private val context: Context) {
 
             override fun onIBeaconLost(iBeacon: IBeaconDevice, region: IBeaconRegion) {
                 Log.e(tag, "onIBeaconLost: $iBeacon")
+                removeBeacon(iBeacon)
             }
         }
     }
 
     fun startScanning() {
+        // Empty the list of beacons
+        beaconsList.clear()
+
         //Connect to scanning service and start scanning when ready
         proximityManager!!.connect(OnServiceReadyListener {
             //Check if proximity manager is already scanning
