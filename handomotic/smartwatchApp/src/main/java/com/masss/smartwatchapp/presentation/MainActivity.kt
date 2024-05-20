@@ -1,7 +1,5 @@
 package com.masss.smartwatchapp.presentation
 
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -17,17 +15,15 @@ import androidx.core.content.ContextCompat
 import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
-import java.util.LinkedList
 import android.widget.TextView
+import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
-import com.masss.smartwatchapp.presentation.classifier.FeatureExtractor
 
 
 class MainActivity : AppCompatActivity() {
 
     /*
         TODO:
-        put all accelerometer logic in a separate class
         put all button logic in a separate class ?
 
         integrate class for watch-mobile interaction
@@ -47,13 +43,6 @@ class MainActivity : AppCompatActivity() {
     // BT MANAGEMENT AND SCANNING
     private lateinit var btBeaconManager: BTBeaconManager
 
-    // Defining how many sample to drop from a call to the classifier to another
-    private val classificationFrequency: Int = 3
-
-    // Defining the length of the windowing buffer array
-    private val bufferSize: Int = 50
-    private var counter: Int = 0
-
     // Tracker for the app state
     private var appIsRecording: Boolean = false
 
@@ -67,67 +56,11 @@ class MainActivity : AppCompatActivity() {
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
 
-    /* Windowing buffering arrays */
-    private val xWindow : LinkedList<Float> = LinkedList()
-    private val yWindow: LinkedList<Float> = LinkedList()
-    private val zWindow: LinkedList<Float> = LinkedList()
-
     /* Classifier*/
     private lateinit var svmClassifier: SVMClassifier
 
-    // From the index 0 to the index numListeningSamples - 1 we have the incoming samples
-    // From the index numListeningSamples to the end we have the old samples
-    private fun addSample(xValue: Float, yValue: Float, zValue: Float){
-        if(xWindow.size >= bufferSize){
-            xWindow.removeFirst() // removing at the head
-            yWindow.removeFirst() // we can remove also y and z as they are of the same size of x
-            zWindow.removeFirst()
-        }
-        // The tail is added in any case
-        xWindow.addLast(xValue)
-        yWindow.addLast(yValue)
-        zWindow.addLast(zValue)
-    }
-
-    // Broadcasts features to the classifier
-    private fun broadcastFeatures(featuresList: List<Float>){
-        val intent = Intent("FeatureList")
-        for(i in 0 until featuresList.size){
-            intent.putExtra("feature_$i", featuresList[i])
-        }
-        Log.d(LOG_TAG, "Sending features to the classifier...")
-        sendBroadcast(intent)
-    }
-
-    private val accelerometerReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val xValue = intent?.getFloatExtra("xValue", 0f)
-            val yValue = intent?.getFloatExtra("yValue", 0f)
-            val zValue = intent?.getFloatExtra("zValue", 0f)
-            val timestamp = intent?.getLongExtra("timestamp", 0)
-
-            if (xValue != null && yValue != null && zValue != null && timestamp != null)
-                addSample(xValue, yValue, zValue)       // Makes the window slide: writes in xWindow, yWindow, zWindow
-
-            if(counter < classificationFrequency)
-                counter++
-            else{           // every 'classificationFrequency' samples features get extracted and sent to the classifier
-                val xFeatures = FeatureExtractor.extractFeatures(xWindow.toFloatArray())
-                val yFeatures = FeatureExtractor.extractFeatures(yWindow.toFloatArray())
-                val zFeatures = FeatureExtractor.extractFeatures(zWindow.toFloatArray())
-                val allFeatures  =
-                    (xFeatures + yFeatures + zFeatures) +
-                            FeatureExtractor.calculateCorrelations(
-                                xWindow.toFloatArray(),
-                                yWindow.toFloatArray(),
-                                zWindow.toFloatArray()
-                            )
-                Log.i("ALL_FEATURES", allFeatures.joinToString(", "))
-                counter = 0
-                broadcastFeatures(allFeatures)
-            }
-        }
-    }
+    // ACCELEROMETER MANAGER
+    private lateinit var accelerometerManager: AccelerometerManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -199,11 +132,7 @@ class MainActivity : AppCompatActivity() {
             setupWhereAmIButton()
 
             // Registering accelerometer receiver
-            registerReceiver(
-                accelerometerReceiver,
-                IntentFilter("AccelerometerData"),
-                RECEIVER_EXPORTED
-            )
+            registerReceiver(accelerometerManager.accelerometerReceiver, IntentFilter("AccelerometerData"), RECEIVER_EXPORTED)
             Log.d(LOG_TAG, "onResume(): an accelerometer receiver has been registered.")
 
             // instantiating the SVM classifier if it hasn't been yet and same goes for the BT manager
@@ -273,6 +202,9 @@ class MainActivity : AppCompatActivity() {
 
         // setting up where am i button
         setupWhereAmIButton()
+
+        // initializing the accelerometer manager
+        accelerometerManager = AccelerometerManager(this)
     }
 
     private fun setupWhereAmIButton() {
@@ -308,7 +240,7 @@ class MainActivity : AppCompatActivity() {
     private fun startAppServices() {
         // enable accelerometer data gathering
         appIsRecording = true
-        Toast.makeText(this, "Started data gathering...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Gesture recognition is active", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
         Log.d(LOG_TAG, "startAppServices(): started accelerometer data gathering")
@@ -317,7 +249,7 @@ class MainActivity : AppCompatActivity() {
     private fun stopAppServices() {
         // stop accelerometer data gathering
         appIsRecording = false
-        Toast.makeText(this, "Stopped data gathering.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Gesture recognition is off", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         stopService(accelRecordingIntent)
         Log.d(LOG_TAG, "Stopped accelerometer data gathering")
