@@ -1,4 +1,4 @@
-package com.masss.smartwatchapp.presentation
+package com.masss.smartwatchapp.presentation.classifier
 
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation
 import org.jtransforms.fft.FloatFFT_1D
