@@ -22,6 +22,7 @@ import com.masss.handomotic.databinding.HomeBinding
 class MainActivity : ComponentActivity() {
     private lateinit var binding: HomeBinding
     private lateinit var beaconManager: BTBeaconManager
+    private var wasScanning = false
 
     private lateinit var updateHandler: Handler
     private lateinit var updateRunnable: Runnable
@@ -35,7 +36,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         binding = DataBindingUtil.setContentView(this, R.layout.home)
-        binding.greeting.text = "Wake up, samurai!"
+        binding.greeting.text = " Wake up, samurai! "
         checkPermissions()
 
         // create the beacon manager instance for Bluetooth scanning
@@ -53,17 +54,9 @@ class MainActivity : ComponentActivity() {
 
         binding.scanningSwitch.setOnClickListener {
             if (beaconManager.isScanning()) {
-                Log.i(TAG, "Stop scanning")
-                binding.greeting.text = "Not scanning"
-                binding.scanningProgress.visibility = View.GONE
-                beaconManager.stopScanning()
-                updateHandler.removeCallbacks(updateRunnable)
+                stopBeaconScan()
             } else {
-                Log.i(TAG, "Start scanning")
-                binding.greeting.text = "Scanning..."
-                binding.scanningProgress.visibility = View.VISIBLE
-                beaconManager.startScanning()
-                updateHandler.post(updateRunnable)
+                startBeaconScan()
             }
         }
     }
@@ -72,22 +65,61 @@ class MainActivity : ComponentActivity() {
         // Obtain the updated list of beacons
         val beacons = beaconManager.getBeacons()
         // Update the adapter of the RecyclerView
-        binding.beaconsRecycler.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        binding.beaconsRecycler.layoutManager =
+            androidx.recyclerview.widget.LinearLayoutManager(this)
         binding.beaconsRecycler.adapter = BeaconsAdapter(beacons)
     }
 
     override fun onStart() {
         super.onStart()
+        if (wasScanning) {
+            startBeaconScan()
+        }
     }
 
     override fun onStop() {
-        beaconManager.stopScanning()
+        if (beaconManager.isScanning()) {
+            wasScanning = true
+            stopBeaconScan()
+        }
         super.onStop()
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        if (wasScanning) {
+            startBeaconScan()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (beaconManager.isScanning()) {
+            wasScanning = true
+            stopBeaconScan()
+        }
     }
 
     override fun onDestroy() {
         beaconManager.destroy()
         super.onDestroy()
+    }
+
+    private fun startBeaconScan() {
+        Log.i(TAG, "Start scanning")
+        binding.greeting.text = "Scanning..."
+        binding.scanningProgress.visibility = View.VISIBLE
+        beaconManager.startScanning()
+        updateHandler.post(updateRunnable)
+    }
+
+    private fun stopBeaconScan() {
+        Log.i(TAG, "Stop scanning")
+        binding.greeting.text = "Not scanning"
+        binding.scanningProgress.visibility = View.GONE
+        beaconManager.stopScanning()
+        updateHandler.removeCallbacks(updateRunnable)
     }
 
     private fun checkPermissions() {

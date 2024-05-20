@@ -15,6 +15,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="80dp"
             android:lineSpacingExtra="12sp"
+            android:padding="10sp"
             android:text="Greetings"
             android:textSize="34sp"
             android:textStyle="bold|italic"
