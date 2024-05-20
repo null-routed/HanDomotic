@@ -244,6 +244,8 @@ class MainActivity : AppCompatActivity() {
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
         Log.d(LOG_TAG, "startAppServices(): started accelerometer data gathering")
+        // Registering SVM BroadcastReceiver
+        svmClassifier.registerReceiver()
     }
 
     private fun stopAppServices() {
