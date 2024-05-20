@@ -6,8 +6,7 @@
     android:layout_height="wrap_content"
     android:background="#FFF8E1"
     android:clickable="true"
-    android:focusable="true"
-    android:stateListAnimator="@animator/row_click_animator">
+    android:focusable="true">
 
     <TextView
         android:id="@+id/beacon_address"
