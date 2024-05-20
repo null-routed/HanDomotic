@@ -19,6 +19,8 @@ import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRe
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import java.util.LinkedList
 import android.widget.TextView
+import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
+import com.masss.smartwatchapp.presentation.classifier.FeatureExtractor
 
 
 class MainActivity : AppCompatActivity() {
@@ -29,10 +31,21 @@ class MainActivity : AppCompatActivity() {
         put all button logic in a separate class ?
 
         integrate class for watch-mobile interaction
+
+        add methods to scan nearby ever x ms and update closeBTBeacons ?
     */
 
     private val LOG_TAG: String = "HanDomotic"
     private var missingRequiredPermissionsView: Boolean = false
+
+    // test
+    private val knownBeacons = mapOf(
+        "C9:8E:A0:EF:D5:77" to "Bedroom",
+        "EE:89:D2:1D:90:51" to "Living Room"
+    )
+
+    // BT MANAGEMENT AND SCANNING
+    private lateinit var btBeaconManager: BTBeaconManager
 
     // Defining how many sample to drop from a call to the classifier to another
     private val classificationFrequency: Int = 3
@@ -48,6 +61,8 @@ class MainActivity : AppCompatActivity() {
         android.Manifest.permission.BODY_SENSORS,
         android.Manifest.permission.BLUETOOTH,
         android.Manifest.permission.BLUETOOTH_ADMIN,
+        android.Manifest.permission.BLUETOOTH_SCAN,
+        android.Manifest.permission.BLUETOOTH_CONNECT,
         android.Manifest.permission.ACCESS_COARSE_LOCATION,
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
@@ -78,7 +93,7 @@ class MainActivity : AppCompatActivity() {
     private fun broadcastFeatures(featuresList: List<Float>){
         val intent = Intent("FeatureList")
         for(i in 0 until featuresList.size){
-            intent.putExtra("feature_$i", featuresList.get(i))
+            intent.putExtra("feature_$i", featuresList[i])
         }
         Log.d(LOG_TAG, "Sending features to the classifier...")
         sendBroadcast(intent)
@@ -181,6 +196,8 @@ class MainActivity : AppCompatActivity() {
             // restoring main button's style and behavior if it was disabled because of some missing permissions
             setupMainButton()
 
+            setupWhereAmIButton()
+
             // Registering accelerometer receiver
             registerReceiver(
                 accelerometerReceiver,
@@ -189,9 +206,11 @@ class MainActivity : AppCompatActivity() {
             )
             Log.d(LOG_TAG, "onResume(): an accelerometer receiver has been registered.")
 
-            // instantiating the SVM classifier if it hasn't been yet
+            // instantiating the SVM classifier if it hasn't been yet and same goes for the BT manager
             if (!::svmClassifier.isInitialized)
                 svmClassifier = SVMClassifier(this)
+            if (!::btBeaconManager.isInitialized)
+                btBeaconManager = BTBeaconManager(this)
 
 
             // Registering SVM BroadcastReceiver
@@ -244,8 +263,46 @@ class MainActivity : AppCompatActivity() {
         // initializing the classifier
         svmClassifier = SVMClassifier(this)
 
+        // initializing the BT manager
+        btBeaconManager = BTBeaconManager(this)
+        btBeaconManager.startScanning()
+        Log.d(LOG_TAG, "onAllPermissionsGranted(): started BT beacons scanning...")
+
         // setting up onclick listeners on activity creation
         setupMainButton()
+
+        // setting up where am i button
+        setupWhereAmIButton()
+    }
+
+    private fun setupWhereAmIButton() {
+        Log.d(LOG_TAG, "setupWhereAmIButton(): setting up Where Am I Button...")
+
+        val whereAmIButton: Button = findViewById(R.id.whereAmIButton)
+
+        whereAmIButton.setOnClickListener {
+            val closeBTBeacons = btBeaconManager.getBeacons()
+
+            if (closeBTBeacons.isNotEmpty()) {
+
+                var closestBeaconLocation: String? = null
+
+                for (beacon in closeBTBeacons) {
+                    if (knownBeacons.containsKey(beacon.address)) {
+                        closestBeaconLocation = knownBeacons[beacon.address]
+                        break
+                    }
+                }
+
+                if (closestBeaconLocation != null)
+                    Toast.makeText(
+                        this,
+                        "You are here: ${closestBeaconLocation.uppercase()}", Toast.LENGTH_SHORT).show()
+                else
+                    Toast.makeText(this, "No close known beacons found", Toast.LENGTH_SHORT).show()
+            } else
+                Toast.makeText(this, "No close known beacons found", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun startAppServices() {
@@ -254,7 +311,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Started data gathering...", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
-        Log.d(LOG_TAG, "Started accelerometer data gathering")
+        Log.d(LOG_TAG, "startAppServices(): started accelerometer data gathering")
     }
 
     private fun stopAppServices() {
@@ -267,6 +324,9 @@ class MainActivity : AppCompatActivity() {
 
         // stop classifier
         svmClassifier.unregisterReceiver()
+
+        // stop BT beacon scanning
+        btBeaconManager.stopScanning()
     }
 
     private fun onPermissionsDenied(deniedPermissions: Set<String>) {
