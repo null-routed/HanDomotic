@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -21,6 +22,7 @@ import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRe
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import java.util.LinkedList
 import android.widget.Switch
+import android.widget.TextView
 import androidx.compose.animation.core.animateDecay
 
 
@@ -122,11 +124,6 @@ class MainActivity : AppCompatActivity() {
             button.background = ContextCompat.getDrawable(this, R.drawable.power_on)
     }
 
-
-    private fun requestPermission(permission: String) {
-        requestPermissionsLauncher.launch(arrayOf(permission))
-    }
-
     private fun checkAndRequestPermissions() {
         Log.d(LOG_TAG, "Called checkAndRequestPermissions()")
         val permissionsToBeRequested = requiredPermissions.filter {
@@ -148,54 +145,7 @@ class MainActivity : AppCompatActivity() {
             onAllPermissionsGranted()
         else {
             onPermissionsDenied(deniedPermissions)
-            setupPermissionsPanel()         // Update permission panel after requesting permissions
         }
-    }
-
-    private fun setupPermissionsPanel() {
-        val permissionPanel = findViewById<LinearLayout>(R.id.permissionPanel)
-        val permissionList = findViewById<LinearLayout>(R.id.permissionList)
-
-        val permissionsToBeGranted = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-
-        permissionList.removeAllViews()
-
-//        android.permission.ACCESS_FINE_LOCATION
-
-        val locationSwitchAlreadyDisplayed: Boolean = false
-        permissionsToBeGranted.forEach { permission ->
-            // Log.d(LOG_TAG, "PERMISSION YET TO BE GRANTED: $permission")
-            if (permission == android.Manifest.permission.BODY_SENSORS) {       // TODO: function to add switches to avoid duplicate code
-                val permissionSwitch = Switch(this)
-                permissionSwitch.text = getString(R.string.accept_movement_data)
-                permissionSwitch.isChecked = false
-                permissionList.addView(permissionSwitch)
-
-                permissionSwitch.setOnCheckedChangeListener { _, isChecked ->
-                    if (isChecked) {
-                        requestPermission(permission)
-                    }
-                }
-            }
-
-            if ((permission == android.Manifest.permission.ACCESS_COARSE_LOCATION || permission == android.Manifest.permission.ACCESS_FINE_LOCATION)
-                && !locationSwitchAlreadyDisplayed) {
-                val permissionSwitch = Switch(this)
-                permissionSwitch.text = getString(R.string.accept_location_data)
-                permissionSwitch.isChecked = false
-                permissionList.addView(permissionSwitch)
-
-                permissionSwitch.setOnCheckedChangeListener { _, isChecked ->
-                    if (isChecked) {
-                        requestPermission(permission)
-                    }
-                }
-            }
-        }
-
-        permissionPanel.visibility = if (permissionsToBeGranted.isNotEmpty()) View.VISIBLE else View.GONE
     }
 
     override fun onResume() {
@@ -211,6 +161,9 @@ class MainActivity : AppCompatActivity() {
 
             // Registering SVM BroadcastReceiver
             svmClassifier.registerReceiver()
+        } else {
+            Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_LONG).show()
+            Log.d(LOG_TAG, "Permissions from settings are still not granted")
         }
     }
 
@@ -275,7 +228,29 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Some permissions need to be accepted to use the app.", Toast.LENGTH_LONG).show()
         }
 
+        // making text and button to go to permissions view visible
+        val deniedPermissionAcceptText = findViewById<TextView>(R.id.permissionsText)
+        deniedPermissionAcceptText.visibility = View.VISIBLE
+        val permissionsActivityButton = findViewById<Button>(R.id.grantMissingPermissionsButton)
+        permissionsActivityButton.visibility = View.VISIBLE
+        val buttonSpacer = findViewById<View>(R.id.permissionsButtonSpacer)
+        buttonSpacer.visibility = View.VISIBLE
 
+        permissionsActivityButton.setOnClickListener {
+            openAppSettings(deniedPermissions)
+        }
+
+        // TODO 20/05:
+        // check for permissions when coming back from settings -> all ok, restore power on button, not ok, remain as you were
+        // add bluetooth modules and display current room
     }
 
+    private fun openAppSettings(deniedPermissions: Set<String>) {
+        val intent = Intent()
+        intent.action = android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        val uri = Uri.fromParts("package", packageName, null)
+        intent.data = uri
+
+        startActivity(intent)
+    }
 }

@@ -8,4 +8,7 @@
     <string name="stop">STOP</string>
     <string name="accept_movement_data">Let app access movement data?</string>
     <string name="accept_location_data">Let app access location data?</string>
+    <string name="grant_missing_permissions">Grant missing permissions?</string>
+    <string name="missing_required_permissions">Missing required permissions:</string>
+    <string name="missingPermissionsTitle">To use the app, accept the following permissions:</string>
 </resources>

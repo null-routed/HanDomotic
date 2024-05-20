@@ -5,35 +5,66 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <Button
-        android:id="@+id/mainButton"
-        android:layout_width="70dp"
-        android:layout_height="70dp"
-        android:background="@drawable/power_on"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- PERMISSIONS PANEL -->
-    <LinearLayout
-        android:id="@+id/permissionPanel"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/mainButton"
-        android:layout_marginTop="16dp">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-        <!-- PERMISSION LIST -->
-        <LinearLayout
-            android:id="@+id/permissionList"
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_height="wrap_content">
 
-            <!-- PERMISSION SWITCHES HERE -->
-        </LinearLayout>
+            <Button
+                android:id="@+id/mainButton"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:background="@drawable/power_on"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.5"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.393" />
 
-    </LinearLayout>
+            <TextView
+                android:id="@+id/permissionsText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="Grant missing permissions?"
+                app:layout_constraintTop_toBottomOf="@id/mainButton"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp"
+                android:textSize="18sp"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:visibility="gone"/>
+
+            <Button
+                android:id="@+id/grantMissingPermissionsButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/right_arrow"
+                app:layout_constraintTop_toBottomOf="@id/permissionsText"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="8dp"
+                android:layout_gravity="center"
+                android:visibility="gone"/>
+
+            <View
+                android:id="@+id/permissionsButtonSpacer"
+                android:layout_width="0dp"
+                android:layout_height="16dp"
+                app:layout_constraintTop_toBottomOf="@id/grantMissingPermissionsButton"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:visibility="gone"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
