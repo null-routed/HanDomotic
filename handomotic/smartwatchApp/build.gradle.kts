@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    kotlin("plugin.serialization") version "1.9.22"
     id("org.jetbrains.kotlin.kapt") version "2.0.0-RC3"
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.0-RC3"
 }
@@ -68,6 +69,7 @@ dependencies {
     implementation(libs.jtransforms)
     implementation(libs.onnxruntime.android)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.kotlinx.serialization.json)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
