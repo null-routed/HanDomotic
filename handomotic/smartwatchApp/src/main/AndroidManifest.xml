@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- APP RUNNING IN BACKGROUND PERMISSION -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <!-- ACCELEROMETER DATA GATHERING PERMISSIONS -->
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <!-- BLUETOOTH SCANNING PERMISSIONS -->
@@ -45,10 +42,8 @@
             </intent-filter>
         </activity>
 
-        <!-- SERVICES -->
         <service android:name=".presentation.accelerometermanager.AccelerometerRecordingService" />
         <service android:name="com.kontakt.sdk.android.ble.service.ProximityService" android:exported="false" />
-        <service android:name=".presentation.services.ForegroundService" android:foregroundServiceType="dataSync|location|bluetooth" android:enabled="true" android:exported="false" />
     </application>
 
 </manifest>
