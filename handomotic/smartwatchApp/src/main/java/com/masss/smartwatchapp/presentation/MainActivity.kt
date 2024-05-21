@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -32,6 +33,7 @@ import com.google.gson.Gson
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
+import com.masss.smartwatchapp.presentation.services.ForegroundService
 import java.io.File
 
 
@@ -41,8 +43,6 @@ class MainActivity : AppCompatActivity() {
         TODO:
         put all button logic in a separate class ?
         integrate class for watch-mobile interaction
-
-        make app keep running when screen is off (if mainButton is pressed)
     */
 
     private val LOG_TAG: String = "HanDomotic"
@@ -52,6 +52,8 @@ class MainActivity : AppCompatActivity() {
     private var missingRequiredPermissionsView: Boolean = false
     private val gestureReceiverHandler = Handler(Looper.getMainLooper())
     private val delayGestureBroadcast = 5000L       // seconds delay between two consecutive gesture recognitions
+
+    private lateinit var wakeLock: PowerManager.WakeLock
 
     // NEEDED PERMISSIONS
     private val requiredPermissions = arrayOf(
@@ -374,6 +376,15 @@ class MainActivity : AppCompatActivity() {
         startService(accelRecordingIntent)
         Log.d(LOG_TAG, "startAppServices(): started accelerometer data gathering")
 
+        // Starting the foreground service
+        val foregroundServiceIntent = Intent(this, ForegroundService::class.java)
+        ContextCompat.startForegroundService(this, foregroundServiceIntent)
+
+        // Acquiring wake lock
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::WakeLockTag")
+        wakeLock.acquire()              // TODO: CHECK THIS WARNING!!!
+
         // Registering SVM BroadcastReceiver
         svmClassifier.registerReceiver()
 
@@ -389,6 +400,14 @@ class MainActivity : AppCompatActivity() {
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         stopService(accelRecordingIntent)
         Log.d(LOG_TAG, "Stopped accelerometer data gathering")
+
+        // Stopping the foreground service
+        val foregroundServiceIntent = Intent(this, ForegroundService::class.java)
+        stopService(foregroundServiceIntent)
+
+        // Releasing wake lock
+        if (wakeLock.isHeld)
+            wakeLock.release()
 
         // stop classifier
         svmClassifier.unregisterReceiver()
