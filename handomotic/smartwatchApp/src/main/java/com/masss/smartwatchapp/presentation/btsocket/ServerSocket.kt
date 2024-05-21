@@ -15,6 +15,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
 
+
 class ServerSocket(private var context: Context,
     private var adapter: BluetoothAdapter, private val requiredPermissions: Array<String>,
     private val uuid: UUID) : Thread() {

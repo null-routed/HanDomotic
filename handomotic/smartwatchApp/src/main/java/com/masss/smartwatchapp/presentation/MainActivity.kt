@@ -16,8 +16,11 @@ import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import android.widget.TextView
+import com.google.gson.Gson
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
+import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
+import java.io.File
 
 
 class MainActivity : AppCompatActivity() {
@@ -25,27 +28,17 @@ class MainActivity : AppCompatActivity() {
     /*
         TODO:
         put all button logic in a separate class ?
-
         integrate class for watch-mobile interaction
-
         add methods to scan nearby ever x ms and update closeBTBeacons ?
     */
 
     private val LOG_TAG: String = "HanDomotic"
-    private var missingRequiredPermissionsView: Boolean = false
-
-    // test
-    private val knownBeacons = mapOf(
-        "C9:8E:A0:EF:D5:77" to "Bedroom",
-        "EE:89:D2:1D:90:51" to "Living Room"
-    )
-
-    // BT MANAGEMENT AND SCANNING
-    private lateinit var btBeaconManager: BTBeaconManager
 
     // Tracker for the app state
     private var appIsRecording: Boolean = false
+    private var missingRequiredPermissionsView: Boolean = false
 
+    // NEEDED PERMISSIONS
     private val requiredPermissions = arrayOf(
         android.Manifest.permission.BODY_SENSORS,
         android.Manifest.permission.BLUETOOTH,
@@ -56,17 +49,63 @@ class MainActivity : AppCompatActivity() {
         android.Manifest.permission.ACCESS_FINE_LOCATION
     )
 
-    /* Classifier*/
+    // CLASSIFIER
     private lateinit var svmClassifier: SVMClassifier
 
     // ACCELEROMETER MANAGER
     private lateinit var accelerometerManager: AccelerometerManager
+
+    // BT MANAGEMENT AND SCANNING
+    private lateinit var btBeaconManager: BTBeaconManager
+    private lateinit var knownBeacons: List<BeaconTest>
+    private val knownBeaconsFilename: String = "known-beacons.json"
+    data class BeaconTest(val macAddress: String, val room: String)         // TEST
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         checkAndRequestPermissions()
+
+        // TEST
+        createTestBeaconsFile()
+
+        // initializing the list of known beacons from file on device persistent memory
+        knownBeacons = initializeOrUpdateKnownBeaconsList()
+    }
+
+    //TEST
+    private fun createTestBeaconsFile() {
+        val knownBeaconsTest = mapOf(
+            "C9:8E:A0:EF:D5:77" to "Bedroom",
+            "EE:89:D2:1D:90:51" to "Living Room"
+        )
+
+        val knownBeacons = knownBeaconsTest.map { (macAddress, room) ->
+            BeaconTest(macAddress, room)
+        }
+
+        val gson = Gson()
+        val jsonString = gson.toJson(knownBeacons)
+
+        val file = File(this.filesDir, "known-beacons.json")
+        file.writeText(jsonString)
+
+        Log.d(LOG_TAG, "createTestBeaconsFile(): test file has been created")
+    }
+
+    // since the file will realistically have few entries we can use this method both to initialize the list and to update it when it changes
+    private fun initializeOrUpdateKnownBeaconsList(): List<BeaconTest> {
+        val file = File(this.filesDir, knownBeaconsFilename)
+        if (!file.exists())
+            return emptyList()
+
+        val jsonString = file.readText()
+        val gson = Gson()
+
+        Log.d(LOG_TAG, "initializeKnownBeaconsList(): the list has been initialized with string '$jsonString'")
+
+        return gson.fromJson(jsonString, Array<BeaconTest>::class.java).toList()
     }
 
     private fun toggleButtonBackground(button: Button) {
@@ -215,26 +254,31 @@ class MainActivity : AppCompatActivity() {
         whereAmIButton.setOnClickListener {
             val closeBTBeacons = btBeaconManager.getBeacons()
 
-            if (closeBTBeacons.isNotEmpty()) {
+            if (knownBeacons.isNotEmpty()) {                // some known beacons have been registered
+                if (closeBTBeacons.isNotEmpty()) {              // some beacons are close by
+                    val closestBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
 
-                var closestBeaconLocation: String? = null
-
-                for (beacon in closeBTBeacons) {
-                    if (knownBeacons.containsKey(beacon.address)) {
-                        closestBeaconLocation = knownBeacons[beacon.address]
-                        break
-                    }
-                }
-
-                if (closestBeaconLocation != null)
-                    Toast.makeText(
-                        this,
-                        "You are here: ${closestBeaconLocation.uppercase()}", Toast.LENGTH_SHORT).show()
-                else
+                    if (closestBeaconLocation != null)
+                        Toast.makeText(this, "You are here: ${closestBeaconLocation.uppercase()}", Toast.LENGTH_SHORT).show()
+                    else
+                        Toast.makeText(this, "No close known beacons found", Toast.LENGTH_SHORT).show()
+                } else
                     Toast.makeText(this, "No close known beacons found", Toast.LENGTH_SHORT).show()
             } else
-                Toast.makeText(this, "No close known beacons found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "No beacons have been registered yet", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun getCurrentRoom(closeBTBeacons: List<Beacon>, knownBeacons: List<BeaconTest>): String? {
+        val knownBeaconsMap = knownBeacons.associateBy { it.macAddress }
+
+        for (closeBeacon in closeBTBeacons) {
+            val matchingBeacon = knownBeaconsMap[closeBeacon.address]
+            if (matchingBeacon != null)
+                return matchingBeacon.room
+        }
+
+        return null
     }
 
     private fun startAppServices() {
@@ -244,6 +288,7 @@ class MainActivity : AppCompatActivity() {
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
         Log.d(LOG_TAG, "startAppServices(): started accelerometer data gathering")
+
         // Registering SVM BroadcastReceiver
         svmClassifier.registerReceiver()
     }
