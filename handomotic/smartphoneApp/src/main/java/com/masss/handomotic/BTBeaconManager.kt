@@ -2,7 +2,6 @@ package com.masss.handomotic
 
 import android.content.Context
 import android.util.Log
-import android.view.View
 import android.widget.Toast
 import com.kontakt.sdk.android.ble.configuration.ScanMode
 import com.kontakt.sdk.android.ble.configuration.ScanPeriod
@@ -14,12 +13,13 @@ import com.kontakt.sdk.android.ble.rssi.RssiCalculators
 import com.kontakt.sdk.android.common.KontaktSDK
 import com.kontakt.sdk.android.common.profile.IBeaconDevice
 import com.kontakt.sdk.android.common.profile.IBeaconRegion
+import com.masss.handomotic.filesocket.FileManager
 import java.util.concurrent.TimeUnit
 
 class BTBeaconManager(private val context: Context) {
     private val tag = "BTBeaconManager"
     private var proximityManager: ProximityManager? = null
-    private val beaconsList = mutableListOf<Beacon>()
+    private val beaconsMap = mutableMapOf<String, Beacon>()
 
     init {
         KontaktSDK.initialize("123")
@@ -29,16 +29,19 @@ class BTBeaconManager(private val context: Context) {
     /**
      * @return the list of beacons sorted by rssi.
      */
-    fun getBeacons(testing: Boolean = false): List<Beacon> {
-        if(testing == true) {
-            val beacons = listOf(
-                Beacon("uuid1", "00:11:22:33:44:55", "", -60.0),
-                Beacon("uuid2", "66:77:88:99:AA:BB", "", -70.0)
-            )
-            return beacons
-        } else {
-            return beaconsList.sortedBy { it.rssi * -1 }
-        }
+    fun getBeacons(testing: Boolean = false): MutableMap<String, Beacon> {
+        //return beaconsList.sortedBy { it.rssi * -1 }
+        return beaconsMap
+    }
+
+    fun getKnownBeacons(): MutableMap<String, Beacon> {
+        val knownBeacons = FileManager.readConfiguration(context) ?: mutableMapOf()
+        return knownBeacons
+    }
+
+    fun getUnknownBeacons(): MutableMap<String, Beacon> {
+        val knownBeacons = FileManager.readConfiguration(context) ?: mutableMapOf()
+        return beaconsMap.filter { !knownBeacons.containsKey(it.key) }.toMutableMap()
     }
 
     /**
@@ -46,16 +49,18 @@ class BTBeaconManager(private val context: Context) {
      */
     private fun addBeacon(beacon: IBeaconDevice) {
         val newBeacon = Beacon(beacon.uniqueId, beacon.address, null, beacon.rssi.toDouble())
-        beaconsList.add(newBeacon)
+        beaconsMap[newBeacon.address] = newBeacon
     }
 
     private fun removeBeacon(beacon: IBeaconDevice) {
-        beaconsList.removeIf { it.address == beacon.address && it.id == beacon.uniqueId }
+        beaconsMap[beacon.address]?.let {
+            beaconsMap.remove(beacon.address)
+        }
     }
 
     // TODO: può essere migliorato evitando di scansionare
     private fun setRssi(beacon: IBeaconDevice) {
-        beaconsList[beaconsList.indexOfFirst { it.address == beacon.address && it.id == beacon.uniqueId }].rssi = beacon.rssi.toDouble()
+        beaconsMap[beacon.address]?.rssi = beacon.rssi.toDouble()
     }
 
     private fun setupProximityManager() {
@@ -92,7 +97,7 @@ class BTBeaconManager(private val context: Context) {
                 iBeacons.forEach {
                     setRssi(it)
                 }
-                Log.i(tag, "Nearest is: " + getBeacons().first())
+                Log.i(tag, "Nearest is: " + getBeacons().values.sortedBy { it.rssi }[0])
             }
 
             override fun onIBeaconLost(iBeacon: IBeaconDevice, region: IBeaconRegion) {
@@ -104,7 +109,7 @@ class BTBeaconManager(private val context: Context) {
 
     fun startScanning() {
         // Empty the list of beacons
-        beaconsList.clear()
+        beaconsMap.clear()
 
         //Connect to scanning service and start scanning when ready
         proximityManager!!.connect(OnServiceReadyListener {

@@ -42,9 +42,6 @@ class MainActivity : ComponentActivity() {
         const val TAG = "BTBeaconManager"
     }
 
-    // This data structure contains the list of already added beacons
-    private var alreadyAddBeacon: HashMap<String, Beacon> = HashMap()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -76,15 +73,14 @@ class MainActivity : ComponentActivity() {
 
     private fun updateRecyclerView() {
         // === TO EDIT: TESTING PURPOSES === //
-        // Obtain the updated list of beacons (scanned by BT)
-        val beacons = beaconManager.getBeacons(true)
+
         // ================================ //
         // Update the adapter of the RecyclerView
         binding.beaconsRecycler.layoutManager =
             androidx.recyclerview.widget.LinearLayoutManager(this)
 
         // here you have to pass only beacons to add! Not already added beacons..
-        beaconAdapter = BeaconsAdapter(beacons, alreadyAddBeacon)
+        beaconAdapter = BeaconsAdapter(beaconManager)
         binding.beaconsRecycler.adapter = beaconAdapter
     }
 

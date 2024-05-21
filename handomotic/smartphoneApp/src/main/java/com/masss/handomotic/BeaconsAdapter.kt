@@ -10,8 +10,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.masss.handomotic.filesocket.FileManager
 
-class BeaconsAdapter(private var beaconsList: List<Beacon>,
-    private var alreadyAddBeacon: HashMap<String, Beacon>) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
+class BeaconsAdapter(private var beaconManager: BTBeaconManager) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
 
     class BeaconsHolder(private val row: View) : RecyclerView.ViewHolder(row) {
         val beaconAddress: TextView = row.findViewById(R.id.beacon_address)
@@ -25,7 +24,13 @@ class BeaconsAdapter(private var beaconsList: List<Beacon>,
     }
 
     override fun onBindViewHolder(holder: BeaconsHolder, position: Int) {
-        val beacon = beaconsList[position] // getting a reference!
+
+        val beacons = beaconManager.getUnknownBeacons().values.sortedBy { it.rssi * -1 }
+
+        Log.i("UKNOWN_BEACONS", "Beacons: ${beaconManager.getUnknownBeacons()}")
+        Log.i("KNOWN_BEACONS", "Beacons: ${beaconManager.getKnownBeacons()}")
+
+        val beacon = beacons[position]
         holder.beaconAddress.text = beacon.address
         holder.beaconUuid.text = beacon.id
         holder.beaconRssi.text = beacon.rssi.toString()
@@ -49,16 +54,13 @@ class BeaconsAdapter(private var beaconsList: List<Beacon>,
             // Setting up the button
             builder.setPositiveButton("ADD") { dialog, _ ->
                 val roomName = roomNameField.text.toString()
-                beaconsList[position].name = roomName // roomName is now saved in memory
-                // Handle the room name input
-                Log.i("POPUP", "Room name: ${beaconsList[position].name}, Address: ${beacon.address}")
-                // the room name should be saved into a file..
-                // .. in which there's an association between the uuid, the mac and the room name
+                val beaconsList = beaconManager.getKnownBeacons()
+                // add the beacon to the list of known beacons
+                beaconsList[beacon.address] = Beacon(beacon.id, beacon.address, roomName, beacon.rssi)
 
-                alreadyAddBeacon.put(beacon.address, beacon)
                 dialog.dismiss()
-                Log.i("LIST_STS", beaconsList.joinToString(separator = ","))
-                FileManager.writeConfiguration(holder.itemView.context, alreadyAddBeacon)
+
+                FileManager.writeConfiguration(holder.itemView.context, beaconsList)
                 Log.i("POPUP", "Written into file...")
             }
 
@@ -71,5 +73,5 @@ class BeaconsAdapter(private var beaconsList: List<Beacon>,
             alertDialog.show()
         }
     }
-    override fun getItemCount(): Int = beaconsList.size
+    override fun getItemCount(): Int = beaconManager.getUnknownBeacons().size
 }

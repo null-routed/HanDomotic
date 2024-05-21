@@ -2,7 +2,6 @@ package com.masss.handomotic.filesocket
 
 import android.content.Context
 import com.masss.handomotic.Beacon
-import com.masss.handomotic.R
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.FileNotFoundException
@@ -14,7 +13,7 @@ class FileManager(val path: String) {
     companion object{
         // The default path for the file storage on the device is
         // data/data/package_name/files
-        fun writeConfiguration(context: Context, beaconMap: HashMap<String, Beacon>){
+        fun writeConfiguration(context: Context, beaconMap: MutableMap<String, Beacon>){
             val json = Json { prettyPrint = true }
             val jsonString = json.encodeToString(ListSerializer(Beacon.serializer()), beaconMap.values.toList())
             context.openFileOutput("room_config.json", Context.MODE_PRIVATE).use {
@@ -23,20 +22,20 @@ class FileManager(val path: String) {
             }
         }
 
-        fun readConfiguration(context: Context): List<Beacon>? {
+        fun readConfiguration(context: Context): MutableMap<String, Beacon>? {
             val json = Json { prettyPrint = true }
-            return try {
-                context.openFileInput("room_config.json").use {
+            try {
+                context.openFileInput("room_config.json").use { it ->
                     val jsonString = it.bufferedReader().use { reader -> reader.readText() }
-                    json.decodeFromString(ListSerializer(Beacon.serializer()), jsonString)
+                    return json.decodeFromString(ListSerializer(Beacon.serializer()), jsonString).associateBy { it.address }.toMutableMap()
                 }
             } catch (e: FileNotFoundException) {
                 // The file is not found for example if the application is runned for the first time
                 println("Configuration file not found")
-                null
+                return null
             } catch (e: Exception) {
                 println("Error reading configuration file: ${e.message}")
-                null
+                return null
             }
         }
     }
