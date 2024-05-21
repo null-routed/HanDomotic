@@ -40,12 +40,6 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val REQUEST_CODE_PERMISSIONS: Int = 100
         const val TAG = "BTBeaconManager"
-        val checkedItems = HashMap<Int, String>()
-
-        // This function retrieves a key value pair list with everything belonging to the HashMap
-        fun getCheckedItems(): List<Pair<Int, String>> {
-            return checkedItems.map { it.toPair() }
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,13 +133,6 @@ class MainActivity : ComponentActivity() {
         binding.greeting.text = "Not scanning"
         binding.scanningProgress.visibility = View.GONE
         beaconManager.stopScanning()
-        // Get checked indices
-        val checkItems = getCheckedItems()
-        Log.i("CHECKBOX_ITEM", "getCheckedItems called..")
-        Log.i("CHECKBOX_ITEM", "${checkItems.size}")
-        for(item in checkItems){
-            Log.i("CHECKBOX_ITEM", "${item.first}, ${item.second}")
-        }
         updateHandler.removeCallbacks(updateRunnable)
     }
 
@@ -165,7 +152,6 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
-
     private fun isAnyOfPermissionsNotGranted(requiredPermissions: Array<String>): Boolean {
         for (permission in requiredPermissions) {
             val checkSelfPermissionResult = ContextCompat.checkSelfPermission(this, permission)
@@ -175,101 +161,4 @@ class MainActivity : ComponentActivity() {
         }
         return false
     }
-
-    class BeaconsAdapter(private var beaconsList: List<Beacon>) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
-
-        class BeaconsHolder(private val row: View) : RecyclerView.ViewHolder(row) {
-            val beaconAddress: TextView = row.findViewById(R.id.beacon_address)
-            val beaconUuid: TextView = row.findViewById(R.id.beacon_uuid)
-            val beaconRssi: TextView = row.findViewById(R.id.beacon_rssi)
-            val checkBox: CheckBox = itemView.findViewById(R.id.checkbox)
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BeaconsHolder {
-            val layout = LayoutInflater.from(parent.context).inflate(R.layout.beacon_item, parent, false)
-            return BeaconsHolder(layout)
-        }
-
-        override fun onBindViewHolder(holder: BeaconsHolder, position: Int) {
-            val beacon = beaconsList[position]
-            holder.beaconAddress.text = beacon.address
-            holder.beaconUuid.text = beacon.id
-            holder.beaconRssi.text = beacon.rssi.toString()
-            holder.checkBox.isChecked = checkedItems.containsKey(position) // returns a boolean
-
-            // Handler that is executed when the line is pressed
-            holder.itemView.setOnClickListener() {
-                Log.i("ROW", "Row $position pressed...")
-
-                // Inflating the popup_room layout
-                val li = LayoutInflater.from(holder.itemView.context)
-                val popupView = li.inflate(R.layout.popup_room, null)
-
-                // Here you have to show a popup in which the user choose the name of the room
-                // The popup is from now on referred as AlertDialog
-                val builder = AlertDialog.Builder(holder.itemView.context)
-                builder.setView(popupView)
-
-                // Getting the element in which you write the name of the room
-                val roomNameField = popupView.findViewById<EditText>(R.id.roomName)
-
-                // Setting up the button
-                builder.setPositiveButton("ADD") { dialog, _ ->
-                    val roomName = roomNameField.text.toString()
-                    // Handle the room name input
-                    Log.i("POPUP", "Room name: $roomName")
-                    dialog.dismiss()
-                }
-
-                builder.setNegativeButton("Cancel") { dialog, _ ->
-                    dialog.cancel()
-                }
-
-                // Creating and showing the alert dialog
-                val alertDialog = builder.create()
-                alertDialog.show()
-
-            }
-
-            // Handler that is executed when the check is pressed
-            // The HashMap contains the address associated to the position in list (used as key)
-            holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
-                Log.i("BUTTON", "Pressed..")
-                if (isChecked) {
-                    checkedItems[position] = beacon.address
-                } else {
-                    checkedItems.remove(position)
-                }
-            }
-        }
-
-        override fun getItemCount(): Int = beaconsList.size
-
-        fun updateBeacons(newBeacons: List<Beacon>) {
-            beaconsList = newBeacons
-            notifyDataSetChanged()
-        }
-
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
