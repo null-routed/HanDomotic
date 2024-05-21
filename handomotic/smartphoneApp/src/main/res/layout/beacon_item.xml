@@ -6,7 +6,8 @@
     android:layout_height="wrap_content"
     android:background="#FFF8E1"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
 
     <TextView
         android:id="@+id/beacon_address"
