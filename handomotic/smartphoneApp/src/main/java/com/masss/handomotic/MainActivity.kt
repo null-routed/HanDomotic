@@ -1,17 +1,18 @@
 package com.masss.handomotic
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.util.SparseBooleanArray
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
@@ -195,6 +196,40 @@ class MainActivity : ComponentActivity() {
             holder.beaconUuid.text = beacon.id
             holder.beaconRssi.text = beacon.rssi.toString()
             holder.checkBox.isChecked = checkedItems.containsKey(position) // returns a boolean
+
+            // Handler that is executed when the line is pressed
+            holder.itemView.setOnClickListener() {
+                Log.i("ROW", "Row $position pressed...")
+
+                // Inflating the popup_room layout
+                val li = LayoutInflater.from(holder.itemView.context)
+                val popupView = li.inflate(R.layout.popup_room, null)
+
+                // Here you have to show a popup in which the user choose the name of the room
+                // The popup is from now on referred as AlertDialog
+                val builder = AlertDialog.Builder(holder.itemView.context)
+                builder.setView(popupView)
+
+                // Getting the element in which you write the name of the room
+                val roomNameField = popupView.findViewById<EditText>(R.id.roomName)
+
+                // Setting up the button
+                builder.setPositiveButton("ADD") { dialog, _ ->
+                    val roomName = roomNameField.text.toString()
+                    // Handle the room name input
+                    Log.i("POPUP", "Room name: $roomName")
+                    dialog.dismiss()
+                }
+
+                builder.setNegativeButton("Cancel") { dialog, _ ->
+                    dialog.cancel()
+                }
+
+                // Creating and showing the alert dialog
+                val alertDialog = builder.create()
+                alertDialog.show()
+
+            }
 
             // Handler that is executed when the check is pressed
             // The HashMap contains the address associated to the position in list (used as key)
