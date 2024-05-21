@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
+import androidx.core.util.Predicate
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.masss.smartwatchapp.R
 import java.nio.FloatBuffer
 
@@ -16,14 +18,16 @@ class SVMClassifier(private val context: Context) {
 
     private var isReceiverRegister = false
 
+    // TEST
+    private var knownGestures: List<String> = mutableListOf("Circle", "Clap")
+
     // This function computes the highest class probability given a confidence Array<FloatArray>
     private fun computeMaxFloatArray(matrix: Array<FloatArray>) : Float{
         var max : Float = 0.0f
         for(row in matrix){
             for (value in row){
-                if(value >= max){
+                if(value >= max)
                     max = value
-                }
             }
         }
         return max
@@ -53,13 +57,23 @@ class SVMClassifier(private val context: Context) {
         val predictionVector = results[0].value as Array<String>
 
         val prediction : String
-        if(confidence < threshold){
+        if(confidence < threshold)
             prediction = "No Gesture"
-        } else {
+        else
             prediction = predictionVector[0]
-        }
+
+        // send broadcast to mainActivity to notify a known hand gesture has been performed
+        if (prediction in knownGestures)
+            sendKnownGestureBroadcast(prediction, confidence)
 
         return prediction to confidence
+    }
+
+    private fun sendKnownGestureBroadcast(prediction: String, confidence: Float) {
+        val intent = Intent("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
+        intent.putExtra("prediction", prediction)
+        intent.putExtra("confidence", confidence)
+        context.sendBroadcast(intent)
     }
 
 
@@ -74,6 +88,7 @@ class SVMClassifier(private val context: Context) {
                     i++
                 }
                 val (prediction, confidence) = retrievePredictionAndConfidence(featureList.toFloatArray(), featureList.size)
+
                 // Printing on Log the results of classification SVM
                 Log.i("CLASSIFIER_LOG", "Predicted: $prediction, with confidence: $confidence")
             }

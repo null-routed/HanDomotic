@@ -1,5 +1,7 @@
 package com.masss.smartwatchapp.presentation
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -281,6 +283,17 @@ class MainActivity : AppCompatActivity() {
         return null
     }
 
+    private val knownGestureReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let {
+                val recognizedGesture = it.getStringExtra("prediction") ?: "No prediction"
+                val confidence = it.getFloatExtra("confidence", 0.0f)
+
+                Log.i(LOG_TAG, "Received prediction from SVMClassifier: $recognizedGesture")
+            }
+        }
+    }
+
     private fun startAppServices() {
         // enable accelerometer data gathering
         appIsRecording = true
@@ -291,6 +304,10 @@ class MainActivity : AppCompatActivity() {
 
         // Registering SVM BroadcastReceiver
         svmClassifier.registerReceiver()
+
+        // Registering the gesture recognition broadcast receiver
+        val filter = IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
+        registerReceiver(knownGestureReceiver, filter)
     }
 
     private fun stopAppServices() {
@@ -306,6 +323,9 @@ class MainActivity : AppCompatActivity() {
 
         // stop BT beacon scanning
         btBeaconManager.stopScanning()
+
+        // Unregistering the gesture recognition receiver
+        unregisterReceiver(knownGestureReceiver)
     }
 
     private fun onPermissionsDenied(deniedPermissions: Set<String>) {
