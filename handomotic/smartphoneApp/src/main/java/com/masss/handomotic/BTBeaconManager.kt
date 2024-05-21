@@ -32,8 +32,8 @@ class BTBeaconManager(private val context: Context) {
     fun getBeacons(testing: Boolean = false): List<Beacon> {
         if(testing == true) {
             val beacons = listOf(
-                Beacon("uuid1", "00:11:22:33:44:55", "Cucina", -60.0),
-                Beacon("uuid2", "66:77:88:99:AA:BB", "Camera", -70.0)
+                Beacon("uuid1", "00:11:22:33:44:55", "", -60.0),
+                Beacon("uuid2", "66:77:88:99:AA:BB", "", -70.0)
             )
             return beacons
         } else {

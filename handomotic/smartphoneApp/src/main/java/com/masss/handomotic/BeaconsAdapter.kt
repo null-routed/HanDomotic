@@ -8,8 +8,10 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.masss.handomotic.filesocket.FileManager
 
-class BeaconsAdapter(private var beaconsList: List<Beacon>) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
+class BeaconsAdapter(private var beaconsList: List<Beacon>,
+    private var alreadyAddBeacon: HashMap<String, Beacon>) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
 
     class BeaconsHolder(private val row: View) : RecyclerView.ViewHolder(row) {
         val beaconAddress: TextView = row.findViewById(R.id.beacon_address)
@@ -23,7 +25,7 @@ class BeaconsAdapter(private var beaconsList: List<Beacon>) : RecyclerView.Adapt
     }
 
     override fun onBindViewHolder(holder: BeaconsHolder, position: Int) {
-        val beacon = beaconsList[position]
+        val beacon = beaconsList[position] // getting a reference!
         holder.beaconAddress.text = beacon.address
         holder.beaconUuid.text = beacon.id
         holder.beaconRssi.text = beacon.rssi.toString()
@@ -47,9 +49,17 @@ class BeaconsAdapter(private var beaconsList: List<Beacon>) : RecyclerView.Adapt
             // Setting up the button
             builder.setPositiveButton("ADD") { dialog, _ ->
                 val roomName = roomNameField.text.toString()
+                beaconsList[position].name = roomName // roomName is now saved in memory
                 // Handle the room name input
-                Log.i("POPUP", "Room name: $roomName")
+                Log.i("POPUP", "Room name: ${beaconsList[position].name}, Address: ${beacon.address}")
+                // the room name should be saved into a file..
+                // .. in which there's an association between the uuid, the mac and the room name
+
+                alreadyAddBeacon.put(beacon.address, beacon)
                 dialog.dismiss()
+                Log.i("LIST_STS", beaconsList.joinToString(separator = ","))
+                FileManager.writeConfiguration(holder.itemView.context, alreadyAddBeacon)
+                Log.i("POPUP", "Written into file...")
             }
 
             builder.setNegativeButton("Cancel") { dialog, _ ->
