@@ -64,15 +64,14 @@ class SVMClassifier(private val context: Context) {
 
         // send broadcast to mainActivity to notify a known hand gesture has been performed
         if (prediction in knownGestures)
-            sendKnownGestureBroadcast(prediction, confidence)
+            sendKnownGestureBroadcast(prediction)
 
         return prediction to confidence
     }
 
-    private fun sendKnownGestureBroadcast(prediction: String, confidence: Float) {
+    private fun sendKnownGestureBroadcast(prediction: String) {
         val intent = Intent("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
         intent.putExtra("prediction", prediction)
-        intent.putExtra("confidence", confidence)
         context.sendBroadcast(intent)
     }
 
