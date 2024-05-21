@@ -1,15 +1,24 @@
 package com.masss.smartwatchapp.presentation
 
+import android.animation.Animator
+import android.animation.ObjectAnimator
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
+import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +27,7 @@ import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import android.widget.TextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.gson.Gson
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
@@ -31,7 +41,8 @@ class MainActivity : AppCompatActivity() {
         TODO:
         put all button logic in a separate class ?
         integrate class for watch-mobile interaction
-        add methods to scan nearby ever x ms and update closeBTBeacons ?
+
+        make app keep running when screen is off (if mainButton is pressed)
     */
 
     private val LOG_TAG: String = "HanDomotic"
@@ -39,6 +50,8 @@ class MainActivity : AppCompatActivity() {
     // Tracker for the app state
     private var appIsRecording: Boolean = false
     private var missingRequiredPermissionsView: Boolean = false
+    private val gestureReceiverHandler = Handler(Looper.getMainLooper())
+    private val delayGestureBroadcast = 5000L       // seconds delay between two consecutive gesture recognitions
 
     // NEEDED PERMISSIONS
     private val requiredPermissions = arrayOf(
@@ -286,12 +299,71 @@ class MainActivity : AppCompatActivity() {
     private val knownGestureReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
+                temporarilyStopKnownGestureReceiver()           // avoid receiving the following gestures for x seconds defined in 'delayGestureBroadcast'
+
                 val recognizedGesture = it.getStringExtra("prediction") ?: "No prediction"
-                val confidence = it.getFloatExtra("confidence", 0.0f)
 
                 Log.i(LOG_TAG, "Received prediction from SVMClassifier: $recognizedGesture")
+                showGestureRecognizedScreen(recognizedGesture)
             }
         }
+    }
+
+    private fun showGestureRecognizedScreen(recognizedGesture: String) {
+        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val popupView = inflater.inflate(R.layout.popup_gesture_recognized, null)
+
+        val popupWindow = PopupWindow(
+            popupView,
+            ConstraintLayout.LayoutParams.MATCH_PARENT,
+            ConstraintLayout.LayoutParams.MATCH_PARENT,
+            true
+        )
+
+        // Set background to semi-transparent black
+        popupWindow.setBackgroundDrawable(ColorDrawable(Color.parseColor("#80000000")))
+        popupWindow.isOutsideTouchable = false
+
+        val messageTextView: TextView = popupView.findViewById(R.id.gesture_recognized_text)
+        messageTextView.text = "GESTURE RECOGNIZED: $recognizedGesture"
+
+        popupWindow.showAtLocation(popupView, Gravity.CENTER, 0, 0)
+
+        val fadeAfterMillis = 3000L
+        val handler = Handler(Looper.getMainLooper())
+        handler.postDelayed({
+            popupWindowFadeOut(popupWindow, popupView)
+        }, fadeAfterMillis)
+    }
+
+    private fun popupWindowFadeOut(popupWindow: PopupWindow, popupView: View) {
+        val animationDuration = 1000L // 1 second fadeout duration
+        val fadeOut = ObjectAnimator.ofFloat(popupView, "alpha", 1f, 0f)
+        fadeOut.duration = animationDuration
+        fadeOut.addListener(object : Animator.AnimatorListener {
+            override fun onAnimationStart(animation: Animator) {}
+            override fun onAnimationEnd(animation: Animator) {
+                popupWindow.dismiss()
+            }
+            override fun onAnimationCancel(animation: Animator) {}
+            override fun onAnimationRepeat(animation: Animator) {}
+        })
+        fadeOut.start()
+    }
+
+
+    // Needed to prevent mainActivity to be flooded with too many messages just for a single recognized gesture
+    private fun temporarilyStopKnownGestureReceiver() {
+        unregisterReceiver(knownGestureReceiver)
+
+        gestureReceiverHandler.postDelayed({
+            registerReceiver(
+                knownGestureReceiver,
+                IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
+            )
+        }, delayGestureBroadcast)
+
+        Log.d(LOG_TAG, "Temporarily stopped the gesture receiver!")
     }
 
     private fun startAppServices() {
