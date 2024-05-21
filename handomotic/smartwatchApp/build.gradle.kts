@@ -54,6 +54,7 @@ android {
 
 dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     implementation(libs.play.services.wearable)
     implementation(platform(libs.androidx.compose.bom))
