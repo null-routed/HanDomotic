@@ -8,14 +8,18 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.masss.handomotic.databinding.ActivityMainBinding
+import com.masss.handomotic.viewmodels.BeaconViewModel
+import androidx.activity.viewModels
 
 class MainActivity : AppCompatActivity() {
 
+    private val beaconViewModel: BeaconViewModel by viewModels()
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        beaconViewModel.initialize(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
