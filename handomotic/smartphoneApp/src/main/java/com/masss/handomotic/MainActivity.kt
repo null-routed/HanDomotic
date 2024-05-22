@@ -1,6 +1,8 @@
 package com.masss.handomotic
 
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -38,5 +40,11 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+
+        binding.addNewDevices.setOnClickListener {
+            Log.d("MainActivity", "Add new devices button clicked")
+            val intent = Intent(this, ScanActivity::class.java)
+            startActivity(intent)
+        }
     }
 }

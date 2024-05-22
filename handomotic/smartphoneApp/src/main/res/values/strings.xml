@@ -4,4 +4,5 @@
     <string name="roomNameTextView">Room Name</string>
     <string name="macAddressTextView">MAC Address</string>
     <string name="noBeacons">No beacons to show</string>
+    <string name="add_new_devices">+</string>
 </resources>
