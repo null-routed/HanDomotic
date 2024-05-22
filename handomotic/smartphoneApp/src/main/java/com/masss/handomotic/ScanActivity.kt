@@ -38,7 +38,6 @@ class ScanActivity : ComponentActivity() {
         binding = ScanActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.greeting.text = " Wake up, samurai! "
-        checkPermissions()
 
         val knownBeaconsList : List<Beacon> = intent.getParcelableArrayListExtra("beacons", Beacon::class.java).orEmpty()
         val knownBeaconsMap = knownBeaconsList.associateBy { it.address }.toMutableMap()
@@ -126,31 +125,5 @@ class ScanActivity : ComponentActivity() {
         binding.scanningProgress.visibility = View.GONE
         beaconManager.stopScanning()
         updateHandler.removeCallbacks(updateRunnable)
-    }
-
-    private fun checkPermissions() {
-        val requiredPermissions = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S
-        ) arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-        else arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
-        if (isAnyOfPermissionsNotGranted(requiredPermissions)) {
-            ActivityCompat.requestPermissions(
-                this,
-                requiredPermissions,
-                ScanActivity.REQUEST_CODE_PERMISSIONS
-            )
-        }
-    }
-    private fun isAnyOfPermissionsNotGranted(requiredPermissions: Array<String>): Boolean {
-        for (permission in requiredPermissions) {
-            val checkSelfPermissionResult = ContextCompat.checkSelfPermission(this, permission)
-            if (PackageManager.PERMISSION_GRANTED != checkSelfPermissionResult) {
-                return true
-            }
-        }
-        return false
     }
 }
