@@ -1,6 +1,7 @@
 package com.masss.handomotic
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -10,16 +11,13 @@ import android.util.Log
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.masss.handomotic.databinding.ScanActivityBinding
+import com.masss.handomotic.models.Beacon
 
 class ScanActivity : ComponentActivity() {
-
-    // =====================================
-    // TO REMOVE: FOR TESTING PURPOSES ONLY
-    private val testing = 1
-    // =====================================
 
     private lateinit var beaconAdapter: BeaconsAdapter
     private lateinit var binding: ScanActivityBinding
@@ -34,6 +32,7 @@ class ScanActivity : ComponentActivity() {
         const val TAG = "BTBeaconManager"
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ScanActivityBinding.inflate(layoutInflater)
@@ -41,9 +40,13 @@ class ScanActivity : ComponentActivity() {
         binding.greeting.text = " Wake up, samurai! "
         checkPermissions()
 
+        val knownBeaconsList : List<Beacon> = intent.getParcelableArrayListExtra("beacons", Beacon::class.java).orEmpty()
+        val knownBeaconsMap = knownBeaconsList.associateBy { it.address }.toMutableMap()
+
         // create the beacon manager instance for Bluetooth scanning
-        beaconManager = BTBeaconManager(this)
+        beaconManager = BTBeaconManager(this, knownBeaconsMap)
         beaconManager.stopScanning()
+
 
         // set up the recycler view
         updateHandler = Handler(Looper.getMainLooper())
@@ -64,9 +67,6 @@ class ScanActivity : ComponentActivity() {
     }
 
     private fun updateRecyclerView() {
-        // === TO EDIT: TESTING PURPOSES === //
-
-        // ================================ //
         // Update the adapter of the RecyclerView
         binding.beaconsRecycler.layoutManager =
             androidx.recyclerview.widget.LinearLayoutManager(this)
