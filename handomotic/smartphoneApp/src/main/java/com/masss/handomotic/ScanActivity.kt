@@ -13,7 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
-import com.masss.handomotic.databinding.HomeBinding
+import com.masss.handomotic.databinding.ScanActivityBinding
 
 class ScanActivity : ComponentActivity() {
 
@@ -23,7 +23,7 @@ class ScanActivity : ComponentActivity() {
     // =====================================
 
     public lateinit var beaconAdapter: BeaconsAdapter
-    private lateinit var binding: HomeBinding
+    private lateinit var binding: ScanActivityBinding
     private lateinit var beaconManager: BTBeaconManager
     private var wasScanning = false
 
@@ -38,7 +38,7 @@ class ScanActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        binding = DataBindingUtil.setContentView(this, R.layout.home)
+        binding = DataBindingUtil.setContentView(this, R.layout.scan_activity)
         binding.greeting.text = " Wake up, samurai! "
         checkPermissions()
 
