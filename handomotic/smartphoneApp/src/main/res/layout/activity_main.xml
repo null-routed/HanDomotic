@@ -22,4 +22,15 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         app:menu="@menu/bottom_nav_menu" />
+
+    <Button
+        android:id="@+id/add_new_devices"
+        android:layout_width="65dp"
+        android:layout_height="65dp"
+        android:layout_above="@+id/nav_view"
+        android:layout_alignParentEnd="true"
+        android:layout_marginEnd="26dp"
+        android:layout_marginBottom="16dp"
+        android:text="@string/add_new_devices"
+        android:textSize="28sp" />
 </RelativeLayout>
