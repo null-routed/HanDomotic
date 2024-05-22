@@ -18,6 +18,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -27,33 +29,10 @@ import com.masss.handomotic.ScanActivity
 
 class PairingFragment : Fragment() {
 
-    // ================ THESE CODE HAS TO BE MOVED IN A PROPER PACKAGE, AS IT'S ALREADY
-    // USED IN ScanActivity.kt =======================================================
-    private fun checkPermissions() {
-        val requiredPermissions = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S
-        ) arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-        else arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
-        if (isAnyOfPermissionsNotGranted(requiredPermissions)) {
-            ActivityCompat.requestPermissions(
-                requireActivity(),
-                requiredPermissions,
-                ScanActivity.REQUEST_CODE_PERMISSIONS
-            )
-        }
-    }
-    private fun isAnyOfPermissionsNotGranted(requiredPermissions: Array<String>): Boolean {
-        for (permission in requiredPermissions) {
-            val checkSelfPermissionResult = ContextCompat.checkSelfPermission(requireContext(), permission)
-            if (PackageManager.PERMISSION_GRANTED != checkSelfPermissionResult) {
-                return true
-            }
-        }
-        return false
-    }
+    private var lastWatchName : String = ""
+    private var lastWatchAddress: String = ""
+    private lateinit var watchPairingButton : Button
+    private lateinit var noWatchesPaired : TextView
 
     private val ACTION_BLUETOOTH_SELECTED =
         "android.bluetooth.devicepicker.action.DEVICE_SELECTED"
@@ -62,7 +41,6 @@ class PairingFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        checkPermissions()
         return inflater.inflate(R.layout.fragment_pairing, container, false)
     }
 
@@ -73,6 +51,16 @@ class PairingFragment : Fragment() {
             if (intent != null) {
                 val device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
                 if (device != null) {
+                    lastWatchName = device.name
+                    lastWatchAddress = device.address
+
+                   if(lastWatchName == ""){
+                        noWatchesPaired.visibility = View.VISIBLE
+                    } else {
+                        Log.i("DEVICE_ADDRESS", lastWatchAddress)
+                        Log.i("DEVICE_NAME", lastWatchName)
+                        noWatchesPaired.visibility = View.GONE
+                    }
                     Log.i("DEVICE_ADDRESS", device.address)
                     Log.i("DEVICE_NAME", device.name)
                 }
@@ -89,7 +77,17 @@ class PairingFragment : Fragment() {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        showBluetoothSearch(requireActivity())
+
+        // We have the need from the persistent storage, if any, the
+        // address and name of the last paired smartwatch
+
+        noWatchesPaired = view.findViewById(R.id.noWatches)
+        watchPairingButton = view.findViewById(R.id.watchPairingButton)
+
+        watchPairingButton.setOnClickListener(){
+            showBluetoothSearch(requireActivity())
+        }
+
     }
 }
 
