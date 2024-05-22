@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
@@ -16,9 +17,11 @@ import java.io.InputStream
 import java.util.UUID
 
 
-class ServerSocket(private var context: Context,
-    private var adapter: BluetoothAdapter, private val requiredPermissions: Array<String>,
-    private val uuid: UUID) : Thread() {
+class ServerSocket(
+    private var context: Context,
+    private var adapter: BluetoothAdapter,
+    private val uuid: UUID)
+        : Thread() {
 
     companion object {
         private const val REQUEST_BLUETOOTH_PERMISSION = 1001
@@ -29,17 +32,16 @@ class ServerSocket(private var context: Context,
 
     private fun handleReceivedData(jsonString: String) {
         try {
-
             val beacon = Json.decodeFromString<Array<RoomSetting>>(jsonString)
 
-            // Handle the received configuration object as needed
             Log.i("ReceiveThread", "Received beacon: $beacon")
 
-            // If needed, you can also send a response back
-            // val response = "Response to received data"
-            // outputStream.write(response.toByteArray())
+            // Update the configuration file with the changes
 
-            // Here you have to write on file / in memory the changes
+
+            // notify main activity to update known beacons
+            val beaconUpdateIntent = Intent("com.masss.smartwatchapp.BEACON_UPDATE")
+            context.sendBroadcast(beaconUpdateIntent)
         } catch (e: Exception) {
             Log.e("ReceiveThread", "Error handling received data", e)
         }
@@ -48,10 +50,9 @@ class ServerSocket(private var context: Context,
     private fun receiveData() {
         try {
             val buffer = ByteArray(1024)
-            var bytes: Int
 
             // Read from the InputStream
-            bytes = inputStream.read(buffer)
+            val bytes: Int = inputStream.read(buffer)
 
             // Construct a string from the valid bytes in the buffer
             val jsonString = String(buffer, 0, bytes)
@@ -80,8 +81,8 @@ class ServerSocket(private var context: Context,
                 }
             }
 
-            serverSocket = adapter.listenUsingRfcommWithServiceRecord("YourServiceName", uuid)
-            // Introduce an exit condition for the server!
+            serverSocket = adapter.listenUsingRfcommWithServiceRecord("BeaconUpdatesFromCompanionApp", uuid)
+
             while(true) {
                 // This will block until a connection is established
                 socket = serverSocket.accept()
@@ -93,6 +94,8 @@ class ServerSocket(private var context: Context,
                 receiveData()
 
                 socket.close()
+
+                // TODO: EXIT CONDITION
             }
         } catch (e: IOException) {
             e.printStackTrace()
