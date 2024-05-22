@@ -1,40 +1,37 @@
 package com.masss.handomotic.filesocket
 
 import android.content.Context
+import com.masss.handomotic.models.Beacon
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.FileNotFoundException
 
 // This is an utility class that writes in an append only file the association between
 // beacon's address and room name
-class FileManager(val path: String) {
+class FileManager() {
 
     companion object{
-        // The default path for the file storage on the device is
-        // data/data/package_name/files
-        fun writeConfiguration(context: Context, beaconMap: MutableMap<String, Beacon>){
-            val json = Json { prettyPrint = true }
-            val jsonString = json.encodeToString(ListSerializer(Beacon.serializer()), beaconMap.values.toList())
-            context.openFileOutput("room_config.json", Context.MODE_PRIVATE).use {
-                println("Saving on file")
-                it.write(jsonString.toByteArray())
-            }
-        }
-
-        fun readConfiguration(context: Context): MutableMap<String, Beacon>? {
+        fun readConfiguration(context: Context): MutableList<Beacon> {
             val json = Json { prettyPrint = true }
             try {
-                context.openFileInput("room_config.json").use { it ->
-                    val jsonString = it.bufferedReader().use { reader -> reader.readText() }
-                    return json.decodeFromString(ListSerializer(Beacon.serializer()), jsonString).associateBy { it.address }.toMutableMap()
+                context.openFileInput("room_config.json").use { inputStream ->
+                    val jsonString = inputStream.bufferedReader().use { reader -> reader.readText() }
+                    val loadedBeacons = json.decodeFromString(ListSerializer(Beacon.serializer()), jsonString).toMutableList()
+                    return loadedBeacons
                 }
             } catch (e: FileNotFoundException) {
-                // The file is not found for example if the application is runned for the first time
                 println("Configuration file not found")
-                return null
             } catch (e: Exception) {
                 println("Error reading configuration file: ${e.message}")
-                return null
+            }
+            return mutableListOf()
+        }
+
+        fun writeConfiguration(context: Context, beacons: List<Beacon>) {
+            val json = Json { prettyPrint = true }
+            val jsonString = json.encodeToString(ListSerializer(Beacon.serializer()), beacons)
+            context.openFileOutput("room_config.json", Context.MODE_PRIVATE).use {
+                it.write(jsonString.toByteArray())
             }
         }
     }
