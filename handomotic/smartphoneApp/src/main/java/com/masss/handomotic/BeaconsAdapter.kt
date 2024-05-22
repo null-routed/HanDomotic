@@ -1,6 +1,8 @@
 package com.masss.handomotic
 
+import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -8,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.masss.handomotic.models.Beacon
 import com.masss.handomotic.filesocket.FileManager
 
 class BeaconsAdapter(private var beaconManager: BTBeaconManager) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
@@ -25,7 +28,7 @@ class BeaconsAdapter(private var beaconManager: BTBeaconManager) : RecyclerView.
 
     override fun onBindViewHolder(holder: BeaconsHolder, position: Int) {
 
-        val beacons = beaconManager.getUnknownBeacons().values.sortedBy { it.rssi * -1 }
+        val beacons = beaconManager.getUnknownBeacons().values.sortedBy { it.rssi?.times(-1) }
 
         Log.i("UKNOWN_BEACONS", "Beacons: ${beaconManager.getUnknownBeacons()}")
         Log.i("KNOWN_BEACONS", "Beacons: ${beaconManager.getKnownBeacons()}")
@@ -54,14 +57,18 @@ class BeaconsAdapter(private var beaconManager: BTBeaconManager) : RecyclerView.
             // Setting up the button
             builder.setPositiveButton("ADD") { dialog, _ ->
                 val roomName = roomNameField.text.toString()
-                val beaconsList = beaconManager.getKnownBeacons()
-                // add the beacon to the list of known beacons
-                beaconsList[beacon.address] = Beacon(beacon.id, beacon.address, roomName, beacon.rssi)
+                beacon.name = roomName
+
+                val newBeacons : ArrayList<Beacon> = ArrayList()
+                newBeacons.add(beacon)
+
+                //beaconManager.addKnownBeacon(beacon)
+                //val resultIntent = Intent()
+                //resultIntent.putParcelableArrayListExtra("new_beacon", newBeacons)
+                //setResult(Activity.RESULT_OK, resultIntent)
+                //finish()
 
                 dialog.dismiss()
-
-                FileManager.writeConfiguration(holder.itemView.context, beaconsList)
-                Log.i("POPUP", "Written into file...")
             }
 
             builder.setNegativeButton("Cancel") { dialog, _ ->

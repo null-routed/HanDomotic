@@ -13,10 +13,14 @@ import com.kontakt.sdk.android.ble.rssi.RssiCalculators
 import com.kontakt.sdk.android.common.KontaktSDK
 import com.kontakt.sdk.android.common.profile.IBeaconDevice
 import com.kontakt.sdk.android.common.profile.IBeaconRegion
-import com.masss.handomotic.filesocket.FileManager
+import com.masss.handomotic.models.Beacon
 import java.util.concurrent.TimeUnit
 
-class BTBeaconManager(private val context: Context) {
+class BTBeaconManager(
+    private val context: Context,
+    private val knownBeacons : MutableMap<String, Beacon>
+) {
+
     private val tag = "BTBeaconManager"
     private var proximityManager: ProximityManager? = null
     private val beaconsMap = mutableMapOf<String, Beacon>()
@@ -24,6 +28,10 @@ class BTBeaconManager(private val context: Context) {
     init {
         KontaktSDK.initialize("123")
         setupProximityManager()
+    }
+
+    fun addKnownBeacon(beacon: Beacon) {
+        knownBeacons[beacon.address] = beacon
     }
 
     /**
@@ -35,12 +43,10 @@ class BTBeaconManager(private val context: Context) {
     }
 
     fun getKnownBeacons(): MutableMap<String, Beacon> {
-        val knownBeacons = FileManager.readConfiguration(context) ?: mutableMapOf()
         return knownBeacons
     }
 
     fun getUnknownBeacons(): MutableMap<String, Beacon> {
-        val knownBeacons = FileManager.readConfiguration(context) ?: mutableMapOf()
         return beaconsMap.filter { !knownBeacons.containsKey(it.key) }.toMutableMap()
     }
 
@@ -97,7 +103,7 @@ class BTBeaconManager(private val context: Context) {
                 iBeacons.forEach {
                     setRssi(it)
                 }
-                Log.i(tag, "Nearest is: " + getBeacons().values.sortedBy { it.rssi }[0])
+                //Log.i(tag, "Nearest is: " + getBeacons().values.sortedBy { it.rssi }[0])
             }
 
             override fun onIBeaconLost(iBeacon: IBeaconDevice, region: IBeaconRegion) {
