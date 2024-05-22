@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -35,6 +36,7 @@ class BeaconFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_beacon, container, false)
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -79,15 +81,12 @@ class BeaconFragment : Fragment() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun handleActivityResult(resultCode: Int, data: Intent?) {
         if (resultCode == RESULT_OK) {
-            val newBeacon = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                data?.getParcelableExtra("new_beacon", Beacon::class.java)
-            } else {
-                data?.getParcelableExtra<Beacon>("new_beacon")
-            }
+            val newBeacon = data?.getParcelableArrayListExtra("new_beacon", Beacon::class.java)
             if (newBeacon != null) {
-                beaconViewModel.addBeacon(newBeacon, requireContext())
+                beaconViewModel.addBeacon(newBeacon.first(), requireContext())
             }
         }
     }
