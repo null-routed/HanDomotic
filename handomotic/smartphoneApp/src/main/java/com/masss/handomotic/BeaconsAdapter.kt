@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.masss.handomotic.models.Beacon
 import com.masss.handomotic.filesocket.FileManager
 
-class BeaconsAdapter(private var beaconManager: BTBeaconManager) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
+class BeaconsAdapter(private var beaconManager: BTBeaconManager, private val activity: Activity) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
 
     class BeaconsHolder(private val row: View) : RecyclerView.ViewHolder(row) {
         val beaconAddress: TextView = row.findViewById(R.id.beacon_address)
@@ -62,11 +62,11 @@ class BeaconsAdapter(private var beaconManager: BTBeaconManager) : RecyclerView.
                 val newBeacons : ArrayList<Beacon> = ArrayList()
                 newBeacons.add(beacon)
 
-                //beaconManager.addKnownBeacon(beacon)
-                //val resultIntent = Intent()
-                //resultIntent.putParcelableArrayListExtra("new_beacon", newBeacons)
-                //setResult(Activity.RESULT_OK, resultIntent)
-                //finish()
+                beaconManager.addKnownBeacon(beacon)
+                val resultIntent = Intent()
+                resultIntent.putParcelableArrayListExtra("new_beacon", newBeacons)
+                activity.setResult(Activity.RESULT_OK, resultIntent)
+                activity.finish()
 
                 dialog.dismiss()
             }

@@ -51,22 +51,21 @@ class BeaconFragment : Fragment() {
 
 
         beaconsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
+
+        // Initialize the adapter and pass the callback to remove a beacon
         registeredBeaconAdapter = RegisteredBeaconAdapter(emptyList()) { beacon ->
             beaconViewModel.removeBeacon(beacon, requireContext())
+            updateVisibility(beaconViewModel.getBeacons())
         }
         beaconsRecyclerView.adapter = registeredBeaconAdapter
 
         updateVisibility(beaconViewModel.getBeacons())
-        beaconViewModel.beacons.observe(viewLifecycleOwner) { beacons ->
-            updateVisibility(beacons)
-        }
 
         scanActivityResultLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
             handleActivityResult(result.resultCode, result.data)
         }
-
 
         addNewDevices.setOnClickListener {
             val intent = Intent(requireContext(), ScanActivity::class.java)
@@ -100,6 +99,7 @@ class BeaconFragment : Fragment() {
             val newBeacon = data?.getParcelableArrayListExtra("new_beacon", Beacon::class.java)
             if (newBeacon != null) {
                 beaconViewModel.addBeacon(newBeacon.first(), requireContext())
+                updateVisibility(beaconViewModel.getBeacons())
             }
         }
     }
