@@ -40,11 +40,5 @@ class MainActivity : AppCompatActivity() {
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
-
-        binding.addNewDevices.setOnClickListener {
-            Log.d("MainActivity", "Add new devices button clicked")
-            val intent = Intent(this, ScanActivity::class.java)
-            startActivity(intent)
-        }
     }
 }
