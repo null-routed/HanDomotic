@@ -1,164 +1,38 @@
 package com.masss.handomotic
 
-import android.Manifest
-import android.app.AlertDialog
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.TextView
-import androidx.activity.ComponentActivity
-import androidx.activity.enableEdgeToEdge
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.databinding.DataBindingUtil
-import androidx.recyclerview.widget.RecyclerView
-import com.masss.handomotic.databinding.HomeBinding
+import androidx.appcompat.app.AppCompatActivity
+import androidx.navigation.fragment.NavHostFragment
+import androidx.navigation.ui.AppBarConfiguration
+import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.navigation.ui.setupWithNavController
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.masss.handomotic.databinding.ActivityMainBinding
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
 
-    // =====================================
-    // TO REMOVE: FOR TESTING PURPOSES ONLY
-    private val testing = 1
-    // =====================================
-
-    public lateinit var beaconAdapter: BeaconsAdapter
-    private lateinit var binding: HomeBinding
-    private lateinit var beaconManager: BTBeaconManager
-    private var wasScanning = false
-
-    private lateinit var updateHandler: Handler
-    private lateinit var updateRunnable: Runnable
-
-    companion object {
-        const val REQUEST_CODE_PERMISSIONS: Int = 100
-        const val TAG = "BTBeaconManager"
-    }
+    private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        binding = DataBindingUtil.setContentView(this, R.layout.home)
-        binding.greeting.text = " Wake up, samurai! "
-        checkPermissions()
 
-        // create the beacon manager instance for Bluetooth scanning
-        beaconManager = BTBeaconManager(this)
-        beaconManager.stopScanning()
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        // set up the recycler view
-        updateHandler = Handler(Looper.getMainLooper())
-        updateRunnable = Runnable {
-            // Update the RecyclerView
-            updateRecyclerView()
-            // Schedule the next update
-            updateHandler.postDelayed(updateRunnable, 1000) // Aggiorna ogni secondo
-        }
+        val navView: BottomNavigationView = binding.navView
 
-        binding.scanningSwitch.setOnClickListener {
-            if (beaconManager.isScanning()) {
-                stopBeaconScan()
-            } else {
-                startBeaconScan()
-            }
-        }
-    }
+        // Find the NavHostFragment using supportFragmentManager
+        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        val navController = navHostFragment.navController
 
-    private fun updateRecyclerView() {
-        // === TO EDIT: TESTING PURPOSES === //
-
-        // ================================ //
-        // Update the adapter of the RecyclerView
-        binding.beaconsRecycler.layoutManager =
-            androidx.recyclerview.widget.LinearLayoutManager(this)
-
-        // here you have to pass only beacons to add! Not already added beacons..
-        beaconAdapter = BeaconsAdapter(beaconManager)
-        binding.beaconsRecycler.adapter = beaconAdapter
-    }
-
-    override fun onStart() {
-        super.onStart()
-        if (wasScanning) {
-            startBeaconScan()
-        }
-    }
-
-    override fun onStop() {
-        if (beaconManager.isScanning()) {
-            wasScanning = true
-            stopBeaconScan()
-        }
-        super.onStop()
-    }
-
-
-    override fun onResume() {
-        super.onResume()
-        if (wasScanning) {
-            startBeaconScan()
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        if (beaconManager.isScanning()) {
-            wasScanning = true
-            stopBeaconScan()
-        }
-    }
-
-    override fun onDestroy() {
-        beaconManager.destroy()
-        super.onDestroy()
-    }
-
-    private fun startBeaconScan() {
-        Log.i(TAG, "Start scanning")
-        binding.greeting.text = "Scanning..."
-        binding.scanningProgress.visibility = View.VISIBLE
-        beaconManager.startScanning()
-        updateHandler.post(updateRunnable)
-    }
-
-    private fun stopBeaconScan() {
-        Log.i(TAG, "Stop scanning")
-        binding.greeting.text = "Not scanning"
-        binding.scanningProgress.visibility = View.GONE
-        beaconManager.stopScanning()
-        updateHandler.removeCallbacks(updateRunnable)
-    }
-
-    private fun checkPermissions() {
-        val requiredPermissions = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S
-        ) arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-        else arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
-        if (isAnyOfPermissionsNotGranted(requiredPermissions)) {
-            ActivityCompat.requestPermissions(
-                this,
-                requiredPermissions,
-                MainActivity.REQUEST_CODE_PERMISSIONS
+        // Passing each menu ID as a set of Ids because each
+        // menu should be considered as top level destinations.
+        val appBarConfiguration = AppBarConfiguration(
+            setOf(
+                R.id.navigation_beacon, R.id.navigation_pairing
             )
-        }
-    }
-    private fun isAnyOfPermissionsNotGranted(requiredPermissions: Array<String>): Boolean {
-        for (permission in requiredPermissions) {
-            val checkSelfPermissionResult = ContextCompat.checkSelfPermission(this, permission)
-            if (PackageManager.PERMISSION_GRANTED != checkSelfPermissionResult) {
-                return true
-            }
-        }
-        return false
+        )
+        setupActionBarWithNavController(navController, appBarConfiguration)
+        navView.setupWithNavController(navController)
     }
 }
