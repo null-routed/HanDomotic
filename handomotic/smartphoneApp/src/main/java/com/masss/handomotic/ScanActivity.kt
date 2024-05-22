@@ -71,7 +71,7 @@ class ScanActivity : ComponentActivity() {
             androidx.recyclerview.widget.LinearLayoutManager(this)
 
         // here you have to pass only beacons to add! Not already added beacons..
-        beaconAdapter = BeaconsAdapter(beaconManager)
+        beaconAdapter = BeaconsAdapter(beaconManager, this)
         binding.beaconsRecycler.adapter = beaconAdapter
     }
 
