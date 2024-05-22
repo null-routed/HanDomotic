@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    app:startDestination="@id/navigation_beacon">
+
+    <fragment
+        android:id="@+id/navigation_beacon"
+        android:name="com.masss.handomotic.fragments.BeaconFragment"
+        android:label="Beacon"
+        tools:layout="@layout/fragment_beacon" />
+    <fragment
+        android:id="@+id/navigation_pairing"
+        android:name="com.masss.handomotic.fragments.PairingFragment"
+        android:label="Pairing"
+        tools:layout="@layout/fragment_pairing" />
+</navigation>
