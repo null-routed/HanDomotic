@@ -121,7 +121,6 @@ class BTBeaconManager(private val context: Context) {
     fun stopScanning() {
         if (proximityManager!!.isScanning) {
             proximityManager!!.stopScanning()
-            Toast.makeText(context, "Scanning stopped", Toast.LENGTH_SHORT).show()
         }
     }
 

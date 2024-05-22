@@ -18,6 +18,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     /*
         TODO:
         put all button logic in a separate class ?
+        put all permissions logic in a separate class ?
         integrate class for watch-mobile interaction
 
         make app keep running when screen is off (if mainButton is pressed)
@@ -118,8 +120,6 @@ class MainActivity : AppCompatActivity() {
         val jsonString = file.readText()
         val gson = Gson()
 
-//        Log.d(LOG_TAG, "initializeKnownBeaconsList(): the list has been initialized with string '$jsonString'")
-
         return gson.fromJson(jsonString, Array<BeaconTest>::class.java).toList()
     }
 
@@ -131,7 +131,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAndRequestPermissions() {
-//        Log.d(LOG_TAG, "checkAndRequestPermissions(): has been called")
         val permissionsToBeRequested = requiredPermissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
@@ -145,7 +144,6 @@ class MainActivity : AppCompatActivity() {
     private val requestPermissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-//        Log.d(LOG_TAG, "requestPermissionsLauncher(): has been called")
         val deniedPermissions = permissions.filter { !it.value }.keys
         if (deniedPermissions.isEmpty())
             onAllPermissionsGranted()
@@ -155,8 +153,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggleSettingsNavigationUI(visible: Boolean) {
-//        Log.d(LOG_TAG, "toggleSettingsNavigationUI(): updating UI...")
-
         val deniedPermissionAcceptText = findViewById<TextView>(R.id.permissionsText)
         val permissionsActivityButton = findViewById<Button>(R.id.grantMissingPermissionsButton)
         val buttonSpacer = findViewById<View>(R.id.permissionsButtonSpacer)
@@ -188,7 +184,6 @@ class MainActivity : AppCompatActivity() {
 
             // Registering accelerometer receiver
             registerReceiver(accelerometerManager.accelerometerReceiver, IntentFilter("AccelerometerData"), RECEIVER_EXPORTED)
-//            Log.d(LOG_TAG, "onResume(): an accelerometer receiver has been registered.")
 
             // instantiating the SVM classifier if it hasn't been yet and same goes for the BT manager
             if (!::svmClassifier.isInitialized)
@@ -199,23 +194,17 @@ class MainActivity : AppCompatActivity() {
 
             // Registering SVM BroadcastReceiver
             svmClassifier.registerReceiver()
-        } else {
+        } else
             Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_LONG).show()
-//            Log.d(LOG_TAG, "onResume(): permissions from settings are still not granted")
-        }
     }
 
     private fun allPermissionsGranted(): Boolean {
-//        Log.d(LOG_TAG, "allPermissionsGranted(): checking if all the necessary permissions have been granted...")
-
         return requiredPermissions.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
     private fun setupMainButton() {
-//        Log.d(LOG_TAG, "setupMainButton(): setting up the main app's button...")
-
         val mainButton: Button = findViewById(R.id.mainButton)
 
         if (missingRequiredPermissionsView)            // graying out the button to make it look disabled
@@ -227,21 +216,17 @@ class MainActivity : AppCompatActivity() {
             if (missingRequiredPermissionsView)
                 Toast.makeText(this, "Some needed permissions are still required", Toast.LENGTH_LONG).show()
             else {
-                if (appIsRecording) {
-//                    Log.d(LOG_TAG, "Stopping all main functionalities...")
+                if (appIsRecording)
                     stopAppServices()
-                } else {
-//                    Log.d(LOG_TAG, "Starting all main functionalities...")
+                else
                     startAppServices()
-                }
+
                 toggleButtonBackground(mainButton)
             }
         }
     }
 
     private fun onAllPermissionsGranted() {
-//        Log.d(LOG_TAG, "onAllPermissionsGranted(): has been called")
-
         missingRequiredPermissionsView = false
 
         // initializing the classifier
@@ -250,7 +235,6 @@ class MainActivity : AppCompatActivity() {
         // initializing the BT manager
         btBeaconManager = BTBeaconManager(this)
         btBeaconManager.startScanning()
-//        Log.d(LOG_TAG, "onAllPermissionsGranted(): started BT beacons scanning...")
 
         // setting up onclick listeners on activity creation
         setupMainButton()
@@ -263,8 +247,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupWhereAmIButton() {
-//        Log.d(LOG_TAG, "setupWhereAmIButton(): setting up Where Am I Button...")
-
         val whereAmIButton: Button = findViewById(R.id.whereAmIButton)
 
         whereAmIButton.setOnClickListener {
@@ -304,7 +286,6 @@ class MainActivity : AppCompatActivity() {
 
                 val recognizedGesture = it.getStringExtra("prediction") ?: "No prediction"
 
-//                Log.i(LOG_TAG, "Received prediction from SVMClassifier: $recognizedGesture")
                 showGestureRecognizedScreen(recognizedGesture)
             }
         }
@@ -325,16 +306,18 @@ class MainActivity : AppCompatActivity() {
         popupWindow.setBackgroundDrawable(ColorDrawable(Color.parseColor("#80000000")))
         popupWindow.isOutsideTouchable = false
 
-        // TODO: CHANGE GRAPHICS WHEN NO BEACONS NEAR
         // get close beacons. if no known beacon is close by, the gesture is useless, it doesn't activate anything
         val closeBTBeacons = btBeaconManager.getBeacons()
         val closestBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
+        val popupMainView: LinearLayout = popupView.findViewById(R.id.popup_main_parent)
         val messageTextView: TextView = popupView.findViewById(R.id.gesture_recognized_text)
-        messageTextView.text = "GESTURE RECOGNIZED: $recognizedGesture"
-        if (closestBeaconLocation.isNullOrEmpty())
+        if (closestBeaconLocation.isNullOrEmpty()) {
+            popupMainView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_light))
             messageTextView.text = "NO KNOWN BEACONS ARE NEAR YOU!"
-        else
+        } else {
+            popupMainView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light))
             messageTextView.text = "GESTURE RECOGNIZED: $recognizedGesture"
+        }
 
         popupWindow.showAtLocation(popupView, Gravity.CENTER, 0, 0)
 
@@ -371,8 +354,6 @@ class MainActivity : AppCompatActivity() {
                 IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
             )
         }, delayGestureBroadcast)
-
-//        Log.d(LOG_TAG, "Temporarily stopped the gesture receiver!")
     }
 
     private fun startAppServices() {
@@ -381,7 +362,6 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Gesture recognition is active", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
-//        Log.d(LOG_TAG, "startAppServices(): started accelerometer data gathering")
 
         // Registering SVM BroadcastReceiver
         svmClassifier.registerReceiver()
@@ -397,7 +377,6 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Gesture recognition is off", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         stopService(accelRecordingIntent)
-//        Log.d(LOG_TAG, "Stopped accelerometer data gathering")
 
         // stop classifier
         svmClassifier.unregisterReceiver()
@@ -412,11 +391,7 @@ class MainActivity : AppCompatActivity() {
     private fun onPermissionsDenied(deniedPermissions: Set<String>) {
         missingRequiredPermissionsView = true
 
-//        Log.d(LOG_TAG, "onPermissionsDenied(): has been called")
         Toast.makeText(this, "App functionalities may be limited.", Toast.LENGTH_SHORT).show()
-
-//        val deniedPermissionsString = deniedPermissions.joinToString(", ")
-//        Log.d(LOG_TAG, "onPermissionsDenied(): denied permissions: $deniedPermissionsString")
 
         // changing main button's style and behavior
         setupMainButton()
@@ -431,8 +406,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openAppSettings() {
-//        Log.d(LOG_TAG, "openAppSettings(): opening app settings...")
-
         val intent = Intent()
         intent.action = android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
         val uri = Uri.fromParts("package", packageName, null)
