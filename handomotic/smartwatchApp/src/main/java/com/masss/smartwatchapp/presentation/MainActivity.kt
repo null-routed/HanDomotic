@@ -29,11 +29,9 @@ import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRe
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
-import com.google.gson.Gson
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
-import java.io.File
 
 
 class MainActivity : AppCompatActivity() {
@@ -42,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         TODO:
         put all button logic in a separate class ?
         put all permissions logic in a separate class ?
+        refactor permissions handling
         integrate class for watch-mobile interaction
 
         make app keep running when screen is off (if mainButton is pressed)
@@ -52,6 +51,8 @@ class MainActivity : AppCompatActivity() {
     // Tracker for the app state
     private var appIsRecording: Boolean = false
     private var missingRequiredPermissionsView: Boolean = false
+
+    // GESTURE RECEIVER MANAGEMENT
     private val gestureReceiverHandler = Handler(Looper.getMainLooper())
     private val delayGestureBroadcast = 5000L       // seconds delay between two consecutive gesture recognitions
 
@@ -74,9 +75,9 @@ class MainActivity : AppCompatActivity() {
 
     // BT MANAGEMENT AND SCANNING
     private lateinit var btBeaconManager: BTBeaconManager
-    private lateinit var knownBeacons: List<BeaconTest>
-    private val knownBeaconsFilename: String = "known-beacons.json"
-    data class BeaconTest(val macAddress: String, val room: String)         // TEST
+    private var knownBeacons: MutableMap<String, Beacon>? = null
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,43 +85,9 @@ class MainActivity : AppCompatActivity() {
 
         checkAndRequestPermissions()
 
-        // TEST
-        createTestBeaconsFile()
-
         // initializing the list of known beacons from file on device persistent memory
-        knownBeacons = initializeOrUpdateKnownBeaconsList()
-    }
-
-    //TEST
-    private fun createTestBeaconsFile() {
-        val knownBeaconsTest = mapOf(
-            "C9:8E:A0:EF:D5:77" to "Bedroom",
-            "EE:89:D2:1D:90:51" to "Living Room"
-        )
-
-        val knownBeacons = knownBeaconsTest.map { (macAddress, room) ->
-            BeaconTest(macAddress, room)
-        }
-
-        val gson = Gson()
-        val jsonString = gson.toJson(knownBeacons)
-
-        val file = File(this.filesDir, "known-beacons.json")
-        file.writeText(jsonString)
-
-        Log.d(LOG_TAG, "createTestBeaconsFile(): test file has been created")
-    }
-
-    // since the file will realistically have few entries we can use this method both to initialize the list and to update it when it changes
-    private fun initializeOrUpdateKnownBeaconsList(): List<BeaconTest> {
-        val file = File(this.filesDir, knownBeaconsFilename)
-        if (!file.exists())
-            return emptyList()
-
-        val jsonString = file.readText()
-        val gson = Gson()
-
-        return gson.fromJson(jsonString, Array<BeaconTest>::class.java).toList()
+        knownBeacons = btBeaconManager.getKnownBeacons()
+        Log.i(LOG_TAG, "Found ${knownBeacons?.size} known beacons")
     }
 
     private fun toggleButtonBackground(button: Button) {
@@ -148,7 +115,7 @@ class MainActivity : AppCompatActivity() {
         if (deniedPermissions.isEmpty())
             onAllPermissionsGranted()
         else {
-            onPermissionsDenied(deniedPermissions)
+            onPermissionsDenied()
         }
     }
 
@@ -168,7 +135,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {           // TODO: REFACTOR THIS
+    override fun onResume() {
         super.onResume()
         Log.d(LOG_TAG, "onResume(): has been called")
         if (allPermissionsGranted()) {
@@ -250,9 +217,9 @@ class MainActivity : AppCompatActivity() {
         val whereAmIButton: Button = findViewById(R.id.whereAmIButton)
 
         whereAmIButton.setOnClickListener {
-            val closeBTBeacons = btBeaconManager.getBeacons()
+            val closeBTBeacons = btBeaconManager.getBeacons()       // getting close beacons
 
-            if (knownBeacons.isNotEmpty()) {                // some known beacons have been registered
+            if (!knownBeacons.isNullOrEmpty()) {                // some known beacons have been registered
                 if (closeBTBeacons.isNotEmpty()) {              // some beacons are close by
                     val closestBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
 
@@ -267,13 +234,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getCurrentRoom(closeBTBeacons: List<Beacon>, knownBeacons: List<BeaconTest>): String? {
-        val knownBeaconsMap = knownBeacons.associateBy { it.macAddress }
+    private fun getCurrentRoom(closeBTBeacons: MutableMap<String, Beacon>, knownBeacons: MutableMap<String, Beacon>?): String? {
+        if (knownBeacons.isNullOrEmpty() || closeBTBeacons.isEmpty())
+            return null
 
-        for (closeBeacon in closeBTBeacons) {
-            val matchingBeacon = knownBeaconsMap[closeBeacon.address]
-            if (matchingBeacon != null)
-                return matchingBeacon.room
+        for ((room, knownBeacon) in knownBeacons) {
+            if (closeBTBeacons.containsKey(knownBeacon.address))
+                return room
         }
 
         return null
@@ -313,10 +280,15 @@ class MainActivity : AppCompatActivity() {
         val messageTextView: TextView = popupView.findViewById(R.id.gesture_recognized_text)
         if (closestBeaconLocation.isNullOrEmpty()) {
             popupMainView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_light))
-            messageTextView.text = "NO KNOWN BEACONS ARE NEAR YOU!"
+            messageTextView.text = getString(R.string.no_known_beacons_are_near_you)
         } else {
             popupMainView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light))
-            messageTextView.text = "GESTURE RECOGNIZED: $recognizedGesture"
+            messageTextView.text =
+                getString(
+                    R.string.gesture_in_room,
+                    getString(R.string.gesture_recognized, recognizedGesture),
+                    closestBeaconLocation
+                )
         }
 
         popupWindow.showAtLocation(popupView, Gravity.CENTER, 0, 0)
@@ -351,7 +323,7 @@ class MainActivity : AppCompatActivity() {
         gestureReceiverHandler.postDelayed({
             registerReceiver(
                 knownGestureReceiver,
-                IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
+                IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED"), RECEIVER_NOT_EXPORTED
             )
         }, delayGestureBroadcast)
     }
@@ -368,7 +340,7 @@ class MainActivity : AppCompatActivity() {
 
         // Registering the gesture recognition broadcast receiver
         val filter = IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
-        registerReceiver(knownGestureReceiver, filter)
+        registerReceiver(knownGestureReceiver, filter, RECEIVER_NOT_EXPORTED)
     }
 
     private fun stopAppServices() {
@@ -388,7 +360,7 @@ class MainActivity : AppCompatActivity() {
         unregisterReceiver(knownGestureReceiver)
     }
 
-    private fun onPermissionsDenied(deniedPermissions: Set<String>) {
+    private fun onPermissionsDenied() {
         missingRequiredPermissionsView = true
 
         Toast.makeText(this, "App functionalities may be limited.", Toast.LENGTH_SHORT).show()
