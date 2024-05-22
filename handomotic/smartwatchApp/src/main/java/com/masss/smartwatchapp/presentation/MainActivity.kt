@@ -2,6 +2,7 @@ package com.masss.smartwatchapp.presentation
 
 import android.animation.Animator
 import android.animation.ObjectAnimator
+import android.bluetooth.BluetoothAdapter
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -32,6 +33,8 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
+import com.masss.smartwatchapp.presentation.btsocket.ServerSocket
+import java.util.UUID
 
 
 class MainActivity : AppCompatActivity() {
@@ -41,8 +44,6 @@ class MainActivity : AppCompatActivity() {
         put all button logic in a separate class ?
         put all permissions logic in a separate class ?
         refactor permissions handling
-        integrate class for watch-mobile interaction
-
         make app keep running when screen is off (if mainButton is pressed)
     */
 
@@ -76,6 +77,8 @@ class MainActivity : AppCompatActivity() {
     // BT MANAGEMENT AND SCANNING
     private lateinit var btBeaconManager: BTBeaconManager
     private var knownBeacons: MutableMap<String, Beacon>? = null
+    private var serverSocketUUID: UUID = UUID.fromString("bffdf9d2-048d-45cb-b621-3025760dc306")
+    private var serverSocket: ServerSocket = ServerSocket(this, BluetoothAdapter.getDefaultAdapter(), serverSocketUUID)
 
 
 
@@ -328,6 +331,13 @@ class MainActivity : AppCompatActivity() {
         }, delayGestureBroadcast)
     }
 
+    // whenever a beacon update is received from the companion app, update the known beacons list, something might have changed
+    private val beaconsUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            knownBeacons = btBeaconManager.getKnownBeacons()            // simply reading again the file
+        }
+    }
+
     private fun startAppServices() {
         // enable accelerometer data gathering
         appIsRecording = true
@@ -338,9 +348,16 @@ class MainActivity : AppCompatActivity() {
         // Registering SVM BroadcastReceiver
         svmClassifier.registerReceiver()
 
+        // Registering beacon updates receiver
+        val beaconUpdatesFilter = IntentFilter("com.masss.smartwatchapp.BEACON_UPDATE")
+        registerReceiver(beaconsUpdateReceiver, beaconUpdatesFilter, RECEIVER_NOT_EXPORTED)
+
         // Registering the gesture recognition broadcast receiver
-        val filter = IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
-        registerReceiver(knownGestureReceiver, filter, RECEIVER_NOT_EXPORTED)
+        val gestureReceiverFilter = IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
+        registerReceiver(knownGestureReceiver, gestureReceiverFilter, RECEIVER_NOT_EXPORTED)
+
+        // Start listening for incoming packets from companion app (operations concerning beacon management)
+        serverSocket.start()
     }
 
     private fun stopAppServices() {
@@ -358,6 +375,9 @@ class MainActivity : AppCompatActivity() {
 
         // Unregistering the gesture recognition receiver
         unregisterReceiver(knownGestureReceiver)
+
+        // Unregistering beacon updates receiver
+        unregisterReceiver(beaconsUpdateReceiver)
     }
 
     private fun onPermissionsDenied() {
