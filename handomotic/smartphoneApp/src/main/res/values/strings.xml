@@ -3,4 +3,5 @@
     <string name="StartStopScanning">START / STOP\nSCANNING</string>
     <string name="roomNameTextView">Room Name</string>
     <string name="macAddressTextView">MAC Address</string>
+    <string name="noBeacons">No beacons to show</string>
 </resources>

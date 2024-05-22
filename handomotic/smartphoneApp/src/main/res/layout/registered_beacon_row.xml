@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/macAddressTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/macAddressTextView"
+        android:textSize="16sp"/>
+
+    <TextView
+        android:id="@+id/roomNameTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="@string/roomNameTextView"
+        android:textSize="16sp" />
+
+    <ImageView
+        android:id="@+id/deleteImageView"
+        android:layout_width="20dp"
+        android:layout_height="wrap_content"
+        android:src="@android:drawable/ic_delete" />
+</LinearLayout>
