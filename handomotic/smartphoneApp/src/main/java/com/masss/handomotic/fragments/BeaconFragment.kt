@@ -1,27 +1,32 @@
 package com.masss.handomotic.fragments
 
+import android.app.Activity.RESULT_OK
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.Button
 import android.widget.TextView
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.masss.handomotic.R
+import com.masss.handomotic.ScanActivity
 import com.masss.handomotic.models.Beacon
 import com.masss.handomotic.viewmodels.BeaconViewModel
-import androidx.fragment.app.activityViewModels
-import com.masss.handomotic.ScanActivity
 
-class BeaconFragment() : Fragment() {
+class BeaconFragment : Fragment() {
 
     private lateinit var beaconsRecyclerView: RecyclerView
     private lateinit var noBeaconsTextView: TextView
     private lateinit var addNewDevices: Button
     private lateinit var registeredBeaconAdapter: RegisteredBeaconAdapter
     private val beaconViewModel: BeaconViewModel by activityViewModels()
+
+    private lateinit var scanActivityResultLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,16 +49,22 @@ class BeaconFragment() : Fragment() {
         }
         beaconsRecyclerView.adapter = registeredBeaconAdapter
 
+        updateVisibility(beaconViewModel.getBeacons())
         beaconViewModel.beacons.observe(viewLifecycleOwner) { beacons ->
             updateVisibility(beacons)
         }
 
-        updateVisibility(beaconViewModel.getBeacons())
+        scanActivityResultLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            handleActivityResult(result.resultCode, result.data)
+        }
+
 
         addNewDevices.setOnClickListener {
-            Log.d("MainActivity", "Add new devices button clicked")
             val intent = Intent(requireContext(), ScanActivity::class.java)
-            startActivity(intent)
+            intent.putParcelableArrayListExtra("beacons", ArrayList(beaconViewModel.getBeacons()))
+            scanActivityResultLauncher.launch(intent)
         }
     }
 
@@ -65,6 +76,19 @@ class BeaconFragment() : Fragment() {
             noBeaconsTextView.visibility = View.GONE
             beaconsRecyclerView.visibility = View.VISIBLE
             registeredBeaconAdapter.updateBeacons(beacons)
+        }
+    }
+
+    private fun handleActivityResult(resultCode: Int, data: Intent?) {
+        if (resultCode == RESULT_OK) {
+            val newBeacon = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                data?.getParcelableExtra("new_beacon", Beacon::class.java)
+            } else {
+                data?.getParcelableExtra<Beacon>("new_beacon")
+            }
+            if (newBeacon != null) {
+                beaconViewModel.addBeacon(newBeacon, requireContext())
+            }
         }
     }
 }
