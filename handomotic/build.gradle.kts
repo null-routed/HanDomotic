@@ -2,8 +2,9 @@
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.jetbrains.kotlin.android) apply false
-    id("org.jetbrains.kotlin.kapt") version "2.0.0-RC3"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0-RC3"
+    id("org.jetbrains.kotlin.kapt") version "2.0.0-RC3" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0-RC3" apply false
+    id("org.jetbrains.kotlin.plugin.parcelize") version "2.0.0" apply false
 }
 
 buildscript {
@@ -12,7 +13,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:3.2.0")
+        classpath("com.android.tools.build:gradle:8.0.2")
     }
 }
 
