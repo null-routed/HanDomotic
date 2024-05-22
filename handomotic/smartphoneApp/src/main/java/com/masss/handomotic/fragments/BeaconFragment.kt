@@ -34,12 +34,9 @@ class BeaconFragment() : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // Initialize beaconManager here
-
-
         beaconsRecyclerView = view.findViewById(R.id.beaconsRecyclerView)
         noBeaconsTextView = view.findViewById(R.id.noBeaconsTextView)
         addNewDevices = view.findViewById(R.id.add_new_devices)
-
 
         beaconsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         registeredBeaconAdapter = RegisteredBeaconAdapter(emptyList()) { beacon ->
