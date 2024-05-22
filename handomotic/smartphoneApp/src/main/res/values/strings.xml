@@ -5,4 +5,6 @@
     <string name="macAddressTextView">MAC Address</string>
     <string name="noBeacons">No beacons to show</string>
     <string name="add_new_devices">+</string>
+    <string name="add_smartwatch">PAIR</string>
+    <string name="noWatches"> No paired smartwatches</string>
 </resources>
