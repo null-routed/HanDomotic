@@ -44,7 +44,7 @@ class MainActivity : AppCompatActivity() {
         put all button logic in a separate class ?
         make app keep running when screen is off (if mainButton is pressed)
     */
-
+    private val uuid: UUID = UUID.fromString("bffdf9d2-048d-45cb-b621-3025760dc306")
     private val LOG_TAG: String = "HanDomotic"
 
     // Tracker for the app state
@@ -82,6 +82,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // Making the ServerSocket listening..
+        val serverThread = ServerSocket(this, uuid)
+        serverThread.start()
+        Log.i("ReceiverThread", "I'm listening..")
 
         checkAndRequestPermissions()
     }

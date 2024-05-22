@@ -4,6 +4,7 @@ import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import android.widget.Button
 import android.widget.TextView
@@ -16,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.masss.handomotic.R
 import com.masss.handomotic.ScanActivity
+import com.masss.handomotic.btsocket.ClientThread
 import com.masss.handomotic.models.Beacon
 import com.masss.handomotic.viewmodels.BeaconViewModel
 
@@ -24,6 +26,7 @@ class BeaconFragment : Fragment() {
     private lateinit var beaconsRecyclerView: RecyclerView
     private lateinit var noBeaconsTextView: TextView
     private lateinit var addNewDevices: Button
+    private lateinit var syncButton: Button
     private lateinit var registeredBeaconAdapter: RegisteredBeaconAdapter
     private val beaconViewModel: BeaconViewModel by activityViewModels()
 
@@ -44,6 +47,8 @@ class BeaconFragment : Fragment() {
         beaconsRecyclerView = view.findViewById(R.id.beaconsRecyclerView)
         noBeaconsTextView = view.findViewById(R.id.noBeaconsTextView)
         addNewDevices = view.findViewById(R.id.add_new_devices)
+        syncButton = view.findViewById(R.id.syncButton)
+
 
         beaconsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         registeredBeaconAdapter = RegisteredBeaconAdapter(emptyList()) { beacon ->
@@ -67,6 +72,14 @@ class BeaconFragment : Fragment() {
             val intent = Intent(requireContext(), ScanActivity::class.java)
             intent.putParcelableArrayListExtra("beacons", ArrayList(beaconViewModel.getBeacons()))
             scanActivityResultLauncher.launch(intent)
+        }
+
+        syncButton.setOnClickListener{
+            // Trying connection with BTSocket
+            // Retrieving the current status of the beacon
+            val clientThread = ClientThread(requireContext(), "F0:8A:76:3F:F7:C5", beaconViewModel.getBeacons())
+            clientThread.start()
+            Log.i("ClientThread", "I'm started..")
         }
     }
 

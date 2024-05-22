@@ -7,4 +7,5 @@
     <string name="add_new_devices">+</string>
     <string name="add_smartwatch">PAIR</string>
     <string name="noWatches"> No paired smartwatches</string>
+    <string name="syncButton">SYNC</string>
 </resources>

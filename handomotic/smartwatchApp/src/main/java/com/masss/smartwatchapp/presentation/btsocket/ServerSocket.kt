@@ -3,6 +3,7 @@ package com.masss.smartwatchapp.presentation.btsocket
 import android.Manifest
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
 import android.content.Context
@@ -11,6 +12,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
 import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.io.InputStream
@@ -19,20 +21,20 @@ import java.util.UUID
 
 class ServerSocket(
     private var context: Context,
-    private var adapter: BluetoothAdapter,
     private val uuid: UUID)
         : Thread() {
 
     companion object {
         private const val REQUEST_BLUETOOTH_PERMISSION = 1001
     }
+    private lateinit var adapter: BluetoothAdapter
     private lateinit var serverSocket: BluetoothServerSocket
     private lateinit var socket: BluetoothSocket
     private lateinit var inputStream: InputStream
 
     private fun handleReceivedData(jsonString: String) {
         try {
-            val beacon = Json.decodeFromString<Array<RoomSetting>>(jsonString)
+            val beacon = Json.decodeFromString<Array<Beacon>>(jsonString)
 
             Log.i("ReceiveThread", "Received beacon: $beacon")
 
@@ -65,6 +67,11 @@ class ServerSocket(
     }
 
     override fun run() {
+        // Obtaining the bluetooth adapter
+        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager?
+        if(manager != null){
+            adapter = manager.adapter
+        }
         try {
             // Create a server socket
             if (ActivityCompat.checkSelfPermission(
