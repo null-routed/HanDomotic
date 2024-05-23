@@ -91,6 +91,7 @@ class ServerSocket(
             serverSocket = adapter.listenUsingRfcommWithServiceRecord("BeaconUpdatesFromCompanionApp", uuid)
 
             while(true) {
+                Log.i("THREAD", "Thread is blocked waiting for a connection")
                 // This will block until a connection is established
                 socket = serverSocket.accept()
 

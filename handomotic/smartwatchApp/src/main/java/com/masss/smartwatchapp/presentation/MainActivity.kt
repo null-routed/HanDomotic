@@ -214,6 +214,11 @@ class MainActivity : AppCompatActivity() {
 
         // initializing the accelerometer manager
         accelerometerManager = AccelerometerManager(this)
+
+        // Start listening for config updates from companion app
+        beaconsUpdateThread = ServerSocket(this, serverSocketUUID)
+        beaconsUpdateThread.start()
+
     }
 
     private fun setupWhereAmIButton() {
