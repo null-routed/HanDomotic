@@ -10,8 +10,6 @@ import java.util.LinkedList
 
 class AccelerometerManager(private val context: Context) {
 
-    private val LOG_TAG: String = "AccelerometerManager"
-
     // Defining the length of the windowing buffer array
     private val bufferSize: Int = 50
     private var counter: Int = 0
@@ -42,7 +40,6 @@ class AccelerometerManager(private val context: Context) {
         for (i in featuresList.indices) {
             intent.putExtra("feature_$i", featuresList[i])
         }
-        Log.d(LOG_TAG, "Sending features to the classifier...")
         context.sendBroadcast(intent)
     }
 
@@ -70,7 +67,6 @@ class AccelerometerManager(private val context: Context) {
                                 yWindow.toFloatArray(),
                                 zWindow.toFloatArray()
                             )
-                Log.i("ALL_FEATURES", allFeatures.joinToString(", "))
                 counter = 0
                 broadcastFeatures(allFeatures)
             }

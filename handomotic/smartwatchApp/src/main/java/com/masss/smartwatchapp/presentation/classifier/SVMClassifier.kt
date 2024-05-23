@@ -89,7 +89,8 @@ class SVMClassifier(private val context: Context) {
                 val (prediction, confidence) = retrievePredictionAndConfidence(featureList.toFloatArray(), featureList.size)
 
                 // Printing on Log the results of classification SVM
-                Log.i("CLASSIFIER_LOG", "Predicted: $prediction, with confidence: $confidence")
+                if (prediction == "Circle" || prediction == "Clap")
+                    Log.i("CLASSIFIER_LOG", "Predicted: $prediction, with confidence: $confidence")
             }
         }
     }

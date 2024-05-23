@@ -10,8 +10,8 @@
     <string name="accept_location_data">Let app access location data?</string>
     <string name="grant_missing_permissions">Grant missing permissions?</string>
     <string name="where_am_i">Where am I?</string>
-    <string name="no_known_beacons_are_near_you">NO KNOWN BEACONS ARE NEAR YOU!</string>
-    <string name="gesture_recognized">GESTURE RECOGNIZED: %1$s</string>
+    <string name="no_known_beacons_are_near_you">No known beacons are near you!</string>
+    <string name="gesture_recognized">Gesture recognized: %1$s</string>
     <string name="gesture_in_room">%1$s in %2$s</string>
     <string name="what_is_my_location">What is my location?</string>
 </resources>
