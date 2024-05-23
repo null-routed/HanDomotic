@@ -8,13 +8,13 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.masss.handomotic.databinding.ActivityMainBinding
-import com.masss.handomotic.viewmodels.BeaconViewModel
+import com.masss.handomotic.viewmodels.ConfigurationViewModel
 import androidx.activity.viewModels
 import com.masss.handomotic.utils.AuthPermission
 
 class MainActivity : AppCompatActivity() {
 
-    private val beaconViewModel: BeaconViewModel by viewModels()
+    private val configurationViewModel: ConfigurationViewModel by viewModels()
     private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
         // Checking the permissions
         AuthPermission.checkPermissions(this, this)
 
-        beaconViewModel.initialize(this)
+        configurationViewModel.initialize(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

@@ -19,7 +19,7 @@ import com.masss.handomotic.R
 import com.masss.handomotic.ScanActivity
 import com.masss.handomotic.btsocket.ClientThread
 import com.masss.handomotic.models.Beacon
-import com.masss.handomotic.viewmodels.BeaconViewModel
+import com.masss.handomotic.viewmodels.ConfigurationViewModel
 
 class BeaconFragment : Fragment() {
 
@@ -28,7 +28,7 @@ class BeaconFragment : Fragment() {
     private lateinit var addNewDevices: Button
     private lateinit var syncButton: Button
     private lateinit var registeredBeaconAdapter: RegisteredBeaconAdapter
-    private val beaconViewModel: BeaconViewModel by activityViewModels()
+    private val configurationViewModel: ConfigurationViewModel by activityViewModels()
 
     private lateinit var scanActivityResultLauncher: ActivityResultLauncher<Intent>
 
@@ -54,12 +54,12 @@ class BeaconFragment : Fragment() {
 
         // Initialize the adapter and pass the callback to remove a beacon
         registeredBeaconAdapter = RegisteredBeaconAdapter(emptyList()) { beacon ->
-            beaconViewModel.removeBeacon(beacon, requireContext())
-            updateVisibility(beaconViewModel.getBeacons())
+            configurationViewModel.removeBeacon(beacon, requireContext())
+            updateVisibility(configurationViewModel.getBeacons())
         }
         beaconsRecyclerView.adapter = registeredBeaconAdapter
 
-        updateVisibility(beaconViewModel.getBeacons())
+        updateVisibility(configurationViewModel.getBeacons())
 
         scanActivityResultLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -69,14 +69,14 @@ class BeaconFragment : Fragment() {
 
         addNewDevices.setOnClickListener {
             val intent = Intent(requireContext(), ScanActivity::class.java)
-            intent.putParcelableArrayListExtra("beacons", ArrayList(beaconViewModel.getBeacons()))
+            intent.putParcelableArrayListExtra("beacons", ArrayList(configurationViewModel.getBeacons()))
             scanActivityResultLauncher.launch(intent)
         }
 
         syncButton.setOnClickListener{
             // Trying connection with BTSocket
             // Retrieving the current status of the beacon
-            val clientThread = ClientThread(requireContext(), "F0:8A:76:3F:F7:C5", beaconViewModel.getBeacons())
+            val clientThread = ClientThread(requireContext(), "F0:8A:76:3F:F7:C5", configurationViewModel.getBeacons())
             clientThread.start()
             Log.i("ClientThread", "I'm started..")
         }
@@ -98,8 +98,8 @@ class BeaconFragment : Fragment() {
         if (resultCode == RESULT_OK) {
             val newBeacon = data?.getParcelableArrayListExtra("new_beacon", Beacon::class.java)
             if (newBeacon != null) {
-                beaconViewModel.addBeacon(newBeacon.first(), requireContext())
-                updateVisibility(beaconViewModel.getBeacons())
+                configurationViewModel.addBeacon(newBeacon.first(), requireContext())
+                updateVisibility(configurationViewModel.getBeacons())
             }
         }
     }
