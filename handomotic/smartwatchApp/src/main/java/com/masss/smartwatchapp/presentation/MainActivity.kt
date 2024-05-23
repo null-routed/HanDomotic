@@ -15,10 +15,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
-import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
-import androidx.constraintlayout.widget.ConstraintLayout
 import com.masss.handomotic.BTBeaconManager
 import com.masss.handomotic.models.Beacon
 import com.masss.handomotic.viewmodels.ConfigurationViewModel
@@ -64,7 +62,7 @@ class MainActivity : AppCompatActivity() {
         svmClassifier = SVMClassifier(this)
 
         // initializing the BT manager
-        btBeaconManager = BTBeaconManager(this)
+        btBeaconManager = BTBeaconManager(this, configurationViewModel.getBeacons())
 
         // initializing the UI manager to handle UI changes
         uiManager = UIManager(this, { startAppServices() }, { stopAppServices() })
@@ -73,7 +71,7 @@ class MainActivity : AppCompatActivity() {
         accelerometerManager = AccelerometerManager(this)
 
         // initializing the server socket for beacon updates
-        beaconsUpdateThread = ServerSocket(this, serverSocketUUID)
+        beaconsUpdateThread = ServerSocket(this, serverSocketUUID, configurationViewModel)
 
         // requesting permissions
         permissionHandler = PermissionHandler(this)
