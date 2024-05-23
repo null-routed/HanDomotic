@@ -2,6 +2,7 @@ package com.masss.smartwatchapp.presentation
 
 import android.animation.Animator
 import android.animation.ObjectAnimator
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -31,27 +32,24 @@ import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import android.widget.TextView
+import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
 import com.masss.smartwatchapp.presentation.btsocket.ServerSocket
+import com.masss.smartwatchapp.presentation.utilities.PermissionHandler
 import java.util.UUID
 
 
 class MainActivity : AppCompatActivity() {
-
-    /*
-        TODO:
-        put all button logic in a separate class ?
-        make app keep running when screen is off (if mainButton is pressed)
-    */
 
     private val LOG_TAG: String = "HanDomotic"
 
     // Tracker for the app state
     private var appIsRecording: Boolean = false
     private var missingRequiredPermissionsView: Boolean = false
+    private lateinit var permissionHandler: PermissionHandler
 
     // GESTURE RECEIVER MANAGEMENT
     private val gestureReceiverHandler = Handler(Looper.getMainLooper())
@@ -87,14 +85,19 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        checkAndRequestPermissions()
+        permissionHandler = PermissionHandler(this)
+        if (!permissionHandler.requestPermissionsAndCheck(requiredPermissions))
+            onPermissionsDenied()
+        else
+            onAllPermissionsGranted()
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onResume() {
         super.onResume()
         Log.d(LOG_TAG, "onResume(): has been called")
-        Log.i(LOG_TAG, allPermissionsGranted().toString())
-        if (allPermissionsGranted()) {
+        Log.i(LOG_TAG, permissionHandler.arePermissionsGranted(requiredPermissions).toString())
+        if (permissionHandler.arePermissionsGranted(requiredPermissions)) {
             missingRequiredPermissionsView = false
 
             // making text and button to go to settings invisible
@@ -115,9 +118,8 @@ class MainActivity : AppCompatActivity() {
 
             // Registering SVM BroadcastReceiver
             svmClassifier.registerReceiver()
-        } else {
+        } else
             Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_LONG).show()
-        }
     }
 
     private fun toggleButtonBackground(button: Button) {
@@ -125,27 +127,6 @@ class MainActivity : AppCompatActivity() {
             button.background = ContextCompat.getDrawable(this, R.drawable.power_off)
         else
             button.background = ContextCompat.getDrawable(this, R.drawable.power_on)
-    }
-
-    private fun checkAndRequestPermissions() {
-        val permissionsToBeRequested = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-
-        if (permissionsToBeRequested.isNotEmpty())
-             requestPermissionsLauncher.launch(permissionsToBeRequested.toTypedArray())
-        else
-            onAllPermissionsGranted()
-    }
-
-    private val requestPermissionsLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val deniedPermissions = permissions.filter { !it.value }.keys
-        if (deniedPermissions.isEmpty())
-            onAllPermissionsGranted()
-        else
-            onPermissionsDenied()
     }
 
     private fun toggleSettingsNavigationUI(visible: Boolean) {
@@ -158,12 +139,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             deniedPermissionAcceptText.visibility = View.GONE
             permissionsActivityButton.visibility = View.GONE
-        }
-    }
-
-    private fun allPermissionsGranted(): Boolean {
-        return requiredPermissions.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
@@ -229,7 +204,7 @@ class MainActivity : AppCompatActivity() {
             whereAmITextView.visibility = View.GONE
             whereAmIButton.visibility = View.GONE
         } else {
-            whereAmIButton.visibility = View.VISIBLE
+            whereAmITextView.visibility = View.VISIBLE
             whereAmIButton.visibility = View.VISIBLE
         }
 
@@ -263,6 +238,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val knownGestureReceiver = object : BroadcastReceiver() {
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
                 temporarilyStopKnownGestureReceiver()           // avoid receiving the following gestures for x seconds defined in 'delayGestureBroadcast'
@@ -274,6 +250,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("InflateParams")
     private fun showGestureRecognizedScreen(recognizedGesture: String) {
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_gesture_recognized, null)
@@ -365,14 +342,11 @@ class MainActivity : AppCompatActivity() {
 
         // Registering beacon updates receiver
         val beaconUpdatesFilter = IntentFilter("com.masss.smartwatchapp.BEACON_UPDATE")
-        registerReceiver(beaconsUpdateReceiver, beaconUpdatesFilter)
+        registerReceiver(beaconsUpdateReceiver, beaconUpdatesFilter, RECEIVER_NOT_EXPORTED)
 
         // Registering the gesture recognition broadcast receiver
         val gestureReceiverFilter = IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
-        registerReceiver(knownGestureReceiver, gestureReceiverFilter)
-
-        // Start listening for incoming packets from companion app (operations concerning beacon management)
-//        serverSocket.start()
+        registerReceiver(knownGestureReceiver, gestureReceiverFilter, RECEIVER_NOT_EXPORTED)
     }
 
     private fun stopAppServices() {
@@ -415,6 +389,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (permissionHandler.onRequestPermissionsResult(requestCode, permissions, grantResults))
+            onAllPermissionsGranted()
+        else
+            onPermissionsDenied()
+    }
+
     private fun openAppSettings() {
         val intent = Intent()
         intent.action = android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
@@ -422,5 +404,17 @@ class MainActivity : AppCompatActivity() {
         intent.data = uri
 
         startActivity(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        // resources cleanup
+        val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
+        stopService(accelRecordingIntent)
+        svmClassifier.unregisterReceiver()
+        btBeaconManager.stopScanning()
+        unregisterReceiver(knownGestureReceiver)
+        unregisterReceiver(beaconsUpdateReceiver)
     }
 }

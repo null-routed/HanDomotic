@@ -64,7 +64,6 @@ class AccelerometerRecordingService : Service() {
     }
 
     private val accelerometerListener = object : SensorEventListener {
-
         override fun onSensorChanged(event: SensorEvent?) {
             // Handle accelerometer data
             event?.let {
