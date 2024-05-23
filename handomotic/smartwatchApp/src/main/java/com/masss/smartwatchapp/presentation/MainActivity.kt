@@ -7,7 +7,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
@@ -25,7 +24,6 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.masss.smartwatchapp.R
@@ -56,19 +54,6 @@ class MainActivity : AppCompatActivity() {
     private val delayGestureBroadcast = 5000L       // seconds delay between two consecutive gesture recognitions
     private lateinit var vibrator: Vibrator
 
-    // NEEDED PERMISSIONS
-    private val requiredPermissions = arrayOf(
-        android.Manifest.permission.WAKE_LOCK,
-        android.Manifest.permission.BODY_SENSORS,
-        android.Manifest.permission.BLUETOOTH,
-        android.Manifest.permission.BLUETOOTH_ADMIN,
-        android.Manifest.permission.BLUETOOTH_SCAN,
-        android.Manifest.permission.BLUETOOTH_CONNECT,
-        android.Manifest.permission.ACCESS_COARSE_LOCATION,
-        android.Manifest.permission.ACCESS_FINE_LOCATION,
-        android.Manifest.permission.VIBRATE
-    )
-
     // CLASSIFIER
     private lateinit var svmClassifier: SVMClassifier
 
@@ -86,7 +71,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         permissionHandler = PermissionHandler(this)
-        if (!permissionHandler.requestPermissionsAndCheck(requiredPermissions))
+        if (!permissionHandler.requestPermissionsAndCheck())
             onPermissionsDenied()
         else
             onAllPermissionsGranted()
@@ -96,8 +81,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Log.d(LOG_TAG, "onResume(): has been called")
-        Log.i(LOG_TAG, permissionHandler.arePermissionsGranted(requiredPermissions).toString())
-        if (permissionHandler.arePermissionsGranted(requiredPermissions)) {
+        Log.i(LOG_TAG, permissionHandler.arePermissionsGranted().toString())
+        if (permissionHandler.arePermissionsGranted()) {
             missingRequiredPermissionsView = false
 
             // making text and button to go to settings invisible
@@ -120,6 +105,26 @@ class MainActivity : AppCompatActivity() {
             svmClassifier.registerReceiver()
         } else
             Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_LONG).show()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        // resources cleanup
+        val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
+        stopService(accelRecordingIntent)
+        svmClassifier.unregisterReceiver()
+        btBeaconManager.stopScanning()
+        unregisterReceiver(knownGestureReceiver)
+        unregisterReceiver(beaconsUpdateReceiver)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (permissionHandler.onRequestPermissionsResult(requestCode, permissions, grantResults))
+            onAllPermissionsGranted()
+        else
+            onPermissionsDenied()
     }
 
     private fun toggleButtonBackground(button: Button) {
@@ -385,36 +390,7 @@ class MainActivity : AppCompatActivity() {
 
         val grantMissingPermissionsButton: Button = findViewById(R.id.grantMissingPermissionsButton)
         grantMissingPermissionsButton.setOnClickListener {
-            openAppSettings()
+            permissionHandler.openAppSettings()
         }
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (permissionHandler.onRequestPermissionsResult(requestCode, permissions, grantResults))
-            onAllPermissionsGranted()
-        else
-            onPermissionsDenied()
-    }
-
-    private fun openAppSettings() {
-        val intent = Intent()
-        intent.action = android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-        val uri = Uri.fromParts("package", packageName, null)
-        intent.data = uri
-
-        startActivity(intent)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-
-        // resources cleanup
-        val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
-        stopService(accelRecordingIntent)
-        svmClassifier.unregisterReceiver()
-        btBeaconManager.stopScanning()
-        unregisterReceiver(knownGestureReceiver)
-        unregisterReceiver(beaconsUpdateReceiver)
     }
 }
