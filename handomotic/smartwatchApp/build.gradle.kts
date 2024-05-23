@@ -53,26 +53,16 @@ android {
 }
 
 dependencies {
+    api(project(":common"))
     implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
-
     implementation(libs.play.services.wearable)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.foundation)
-    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
-    implementation(libs.sdk)
     implementation(libs.commons.math3)
     implementation(libs.jtransforms)
     implementation(libs.onnxruntime.android)
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.kotlinx.serialization.json)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+
 }

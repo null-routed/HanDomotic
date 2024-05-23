@@ -1,9 +1,7 @@
 package com.masss.handomotic.filesocket
 
 import android.content.Context
-import com.masss.handomotic.models.Beacon
 import com.masss.handomotic.models.Configuration
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.FileNotFoundException
 
