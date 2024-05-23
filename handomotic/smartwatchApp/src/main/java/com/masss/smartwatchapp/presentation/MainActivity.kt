@@ -2,7 +2,6 @@ package com.masss.smartwatchapp.presentation
 
 import android.animation.Animator
 import android.animation.ObjectAnimator
-import android.bluetooth.BluetoothAdapter
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,9 +10,12 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -44,7 +46,7 @@ class MainActivity : AppCompatActivity() {
         put all button logic in a separate class ?
         make app keep running when screen is off (if mainButton is pressed)
     */
-    private val uuid: UUID = UUID.fromString("bffdf9d2-048d-45cb-b621-3025760dc306")
+
     private val LOG_TAG: String = "HanDomotic"
 
     // Tracker for the app state
@@ -54,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     // GESTURE RECEIVER MANAGEMENT
     private val gestureReceiverHandler = Handler(Looper.getMainLooper())
     private val delayGestureBroadcast = 5000L       // seconds delay between two consecutive gesture recognitions
+    private lateinit var vibrator: Vibrator
 
     // NEEDED PERMISSIONS
     private val requiredPermissions = arrayOf(
@@ -64,7 +67,8 @@ class MainActivity : AppCompatActivity() {
         android.Manifest.permission.BLUETOOTH_SCAN,
         android.Manifest.permission.BLUETOOTH_CONNECT,
         android.Manifest.permission.ACCESS_COARSE_LOCATION,
-        android.Manifest.permission.ACCESS_FINE_LOCATION
+        android.Manifest.permission.ACCESS_FINE_LOCATION,
+        android.Manifest.permission.VIBRATE
     )
 
     // CLASSIFIER
@@ -77,16 +81,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btBeaconManager: BTBeaconManager
     private var knownBeacons: MutableMap<String, Beacon>? = null
     private var serverSocketUUID: UUID = UUID.fromString("bffdf9d2-048d-45cb-b621-3025760dc306")
-//    private var serverSocket: ServerSocket = ServerSocket(this, BluetoothAdapter.getDefaultAdapter(), serverSocketUUID)
+    private lateinit var beaconsUpdateThread: ServerSocket
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        // Making the ServerSocket listening..
-        val serverThread = ServerSocket(this, uuid)
-        serverThread.start()
-        Log.i("ReceiverThread", "I'm listening..")
 
         checkAndRequestPermissions()
     }
@@ -112,7 +111,7 @@ class MainActivity : AppCompatActivity() {
             if (!::accelerometerManager.isInitialized) accelerometerManager = AccelerometerManager(this)
 
             // Registering accelerometer receiver
-            registerReceiver(accelerometerManager.accelerometerReceiver, IntentFilter("AccelerometerData"))
+            registerReceiver(accelerometerManager.accelerometerReceiver, IntentFilter("AccelerometerData"), RECEIVER_NOT_EXPORTED)
 
             // Registering SVM BroadcastReceiver
             svmClassifier.registerReceiver()
@@ -210,6 +209,9 @@ class MainActivity : AppCompatActivity() {
         // setting up where am i button
         setupWhereAmIButton()
 
+        // setting up vibration service
+        vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
         // initializing the accelerometer manager
         accelerometerManager = AccelerometerManager(this)
     }
@@ -299,6 +301,9 @@ class MainActivity : AppCompatActivity() {
                     closestBeaconLocation
                 )
         }
+
+        val vibrationEffect = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+        vibrator.vibrate(vibrationEffect)
 
         popupWindow.showAtLocation(popupView, Gravity.CENTER, 0, 0)
 
