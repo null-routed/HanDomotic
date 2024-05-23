@@ -22,9 +22,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import com.masss.handomotic.BTBeaconManager
+import com.masss.handomotic.models.Beacon
 import com.masss.smartwatchapp.R
-import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
-import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
 
 
 class UIManager(
