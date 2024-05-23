@@ -1,30 +1,17 @@
 package com.masss.smartwatchapp.presentation
 
-import android.animation.Animator
-import android.animation.ObjectAnimator
-import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.util.Log
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
 import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
@@ -38,6 +25,7 @@ import com.masss.handomotic.viewmodels.ConfigurationViewModel
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btsocket.ServerSocket
 import com.masss.smartwatchapp.presentation.utilities.PermissionHandler
+import com.masss.smartwatchapp.presentation.utilities.UIManager
 import java.util.UUID
 
 
@@ -49,13 +37,12 @@ class MainActivity : AppCompatActivity() {
 
     // Tracker for the app state
     private var appIsRecording: Boolean = false
-    private var missingRequiredPermissionsView: Boolean = false
     private lateinit var permissionHandler: PermissionHandler
+    private lateinit var uiManager: UIManager
 
     // GESTURE RECEIVER MANAGEMENT
     private val gestureReceiverHandler = Handler(Looper.getMainLooper())
     private val delayGestureBroadcast = 5000L       // seconds delay between two consecutive gesture recognitions
-    private lateinit var vibrator: Vibrator
 
     // CLASSIFIER
     private lateinit var svmClassifier: SVMClassifier
@@ -72,8 +59,23 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        configurationViewModel.initialize(this)
 
+        // initializing the classifier
+        svmClassifier = SVMClassifier(this)
+
+        // initializing the BT manager
+        btBeaconManager = BTBeaconManager(this)
+
+        // initializing the UI manager to handle UI changes
+        uiManager = UIManager(this, { startAppServices() }, { stopAppServices() })
+
+        // initializing the accelerometer manager
+        accelerometerManager = AccelerometerManager(this)
+
+        // initializing the server socket for beacon updates
+        beaconsUpdateThread = ServerSocket(this, serverSocketUUID)
+
+        // requesting permissions
         permissionHandler = PermissionHandler(this)
         if (!permissionHandler.requestPermissionsAndCheck())
             onPermissionsDenied()
@@ -84,23 +86,18 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onResume() {
         super.onResume()
-        Log.d(LOG_TAG, "onResume(): has been called")
-        Log.i(LOG_TAG, permissionHandler.arePermissionsGranted().toString())
         if (permissionHandler.arePermissionsGranted()) {
-            missingRequiredPermissionsView = false
+            // making text and button to go to settings invisible if when coming back all the permissions have been granted
+            uiManager.toggleSettingsNavigationUI(false)
 
-            // making text and button to go to settings invisible
-            toggleSettingsNavigationUI(false)
+            // setup whereAmIButton for sure since all permissions are granted if here
+            uiManager.setupWhereAmIButton(false, btBeaconManager, knownBeacons)
 
             // restoring main button's style and behavior if it was disabled because of some missing permissions
-            if (!appIsRecording)
-                setupMainButton()
-
-            setupWhereAmIButton()
-
-            if (!::svmClassifier.isInitialized) svmClassifier = SVMClassifier(this)
-            if (!::btBeaconManager.isInitialized) btBeaconManager = BTBeaconManager(this, configurationViewModel.getBeacons())
-            if (!::accelerometerManager.isInitialized) accelerometerManager = AccelerometerManager(this)
+            if (!appIsRecording) {
+                uiManager.setupMainButton(false)
+                uiManager.setupMainButtonOnClickListener(appIsRecording, false)
+            }
 
             // Registering accelerometer receiver
             registerReceiver(accelerometerManager.accelerometerReceiver, IntentFilter("AccelerometerData"), RECEIVER_NOT_EXPORTED)
@@ -108,7 +105,7 @@ class MainActivity : AppCompatActivity() {
             // Registering SVM BroadcastReceiver
             svmClassifier.registerReceiver()
         } else
-            Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroy() {
@@ -131,119 +128,21 @@ class MainActivity : AppCompatActivity() {
             onPermissionsDenied()
     }
 
-    private fun toggleButtonBackground(button: Button) {
-        if (appIsRecording)
-            button.background = ContextCompat.getDrawable(this, R.drawable.power_off)
-        else
-            button.background = ContextCompat.getDrawable(this, R.drawable.power_on)
-    }
-
-    private fun toggleSettingsNavigationUI(visible: Boolean) {
-        val deniedPermissionAcceptText = findViewById<TextView>(R.id.permissionsText)
-        val permissionsActivityButton = findViewById<Button>(R.id.grantMissingPermissionsButton)
-
-        if (visible) {
-            deniedPermissionAcceptText.visibility = View.VISIBLE
-            permissionsActivityButton.visibility = View.VISIBLE
-        } else {
-            deniedPermissionAcceptText.visibility = View.GONE
-            permissionsActivityButton.visibility = View.GONE
-        }
-    }
-
-    private fun setupMainButton() {
-        val mainButton: Button = findViewById(R.id.mainButton)
-
-        if (missingRequiredPermissionsView)            // graying out the button to make it look disabled
-            mainButton.background = ContextCompat.getDrawable(this, R.drawable.power_disabled)
-        else           // restoring the button to its main style (power on background)
-            mainButton.background = ContextCompat.getDrawable(this, R.drawable.power_on)
-
-        mainButton.setOnClickListener {
-            if (missingRequiredPermissionsView)
-                Toast.makeText(this, "Some needed permissions are still required", Toast.LENGTH_LONG).show()
-            else {
-                if (appIsRecording)
-                    stopAppServices()
-                else
-                    startAppServices()
-
-                toggleButtonBackground(mainButton)
-            }
-        }
-    }
-
     private fun onAllPermissionsGranted() {
-        missingRequiredPermissionsView = false
-
-        // initializing the classifier
-        svmClassifier = SVMClassifier(this)
-
-        // initializing the BT manager
-        btBeaconManager = BTBeaconManager(this, configurationViewModel.getBeacons())
+        // starting BT beacon scanning for nearby beacons
         btBeaconManager.startScanning()
 
         // initializing the list of known beacons from file on device persistent memory
         knownBeacons = btBeaconManager.getKnownBeacons()
         Log.i(LOG_TAG, "Found ${knownBeacons?.size} known beacons")
 
-        // setting up onclick listeners on activity creation
-        setupMainButton()
-
-        // setting up where am i button
-        setupWhereAmIButton()
-
-        // setting up vibration service
-        vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-
-        // initializing the accelerometer manager
-        accelerometerManager = AccelerometerManager(this)
+        // setting up onclick listeners on activity creation for main and whereAmI buttons
+        uiManager.setupMainButton(false)
+        uiManager.setupMainButtonOnClickListener(appIsRecording, false)
+        uiManager.setupWhereAmIButton(false, btBeaconManager, knownBeacons)
 
         // Start listening for config updates from companion app
-        beaconsUpdateThread = ServerSocket(this, serverSocketUUID, configurationViewModel)
         beaconsUpdateThread.start()
-
-    }
-
-    private fun setupWhereAmIButton() {
-        val whereAmIButton: Button = findViewById(R.id.whereAmIButton)
-        val whereAmITextView: TextView = findViewById(R.id.whereAmIText)
-
-        if (missingRequiredPermissionsView) {
-            whereAmITextView.visibility = View.GONE
-            whereAmIButton.visibility = View.GONE
-        } else {
-            whereAmITextView.visibility = View.VISIBLE
-            whereAmIButton.visibility = View.VISIBLE
-        }
-
-        whereAmIButton.setOnClickListener {
-            val closeBTBeacons = btBeaconManager.getBeacons()       // getting close beacons
-
-            if (!knownBeacons.isNullOrEmpty()) {                // some known beacons have been registered
-                if (closeBTBeacons.isNotEmpty()) {              // some beacons are close by
-                    val closestBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
-                    if (closestBeaconLocation != null)
-                        Toast.makeText(this, "You are here: ${closestBeaconLocation.uppercase()}", Toast.LENGTH_SHORT).show()
-                    else
-                        Toast.makeText(this, "No close known beacons found", Toast.LENGTH_SHORT).show()
-                } else
-                    Toast.makeText(this, "No close known beacons found", Toast.LENGTH_SHORT).show()
-            } else
-                Toast.makeText(this, "No beacons have been registered yet", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun getCurrentRoom(closeBTBeacons: MutableMap<String, Beacon>, knownBeacons: MutableMap<String, Beacon>?): String? {
-        if (knownBeacons.isNullOrEmpty() || closeBTBeacons.isEmpty())
-            return null
-
-        for ((room, knownBeacon) in knownBeacons) {
-            if (closeBTBeacons.containsKey(knownBeacon.address))
-                return room
-        }
-
-        return null
     }
 
     private val knownGestureReceiver = object : BroadcastReceiver() {
@@ -254,70 +153,9 @@ class MainActivity : AppCompatActivity() {
 
                 val recognizedGesture = it.getStringExtra("prediction") ?: "No prediction"
 
-                showGestureRecognizedScreen(recognizedGesture)
+                uiManager.showGestureRecognizedScreen(recognizedGesture, btBeaconManager, knownBeacons)
             }
         }
-    }
-
-    @SuppressLint("InflateParams")
-    private fun showGestureRecognizedScreen(recognizedGesture: String) {
-        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val popupView = inflater.inflate(R.layout.popup_gesture_recognized, null)
-
-        val popupWindow = PopupWindow(
-            popupView,
-            ConstraintLayout.LayoutParams.MATCH_PARENT,
-            ConstraintLayout.LayoutParams.MATCH_PARENT,
-            true
-        )
-
-        // Set background to semi-transparent black
-        popupWindow.setBackgroundDrawable(ColorDrawable(Color.parseColor("#80000000")))
-        popupWindow.isOutsideTouchable = false
-
-        // get close beacons. if no known beacon is close by, the gesture is useless, it doesn't activate anything
-        val closeBTBeacons = btBeaconManager.getBeacons()
-        val closestBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
-        val popupMainView: LinearLayout = popupView.findViewById(R.id.popup_main_parent)
-        val messageTextView: TextView = popupView.findViewById(R.id.gesture_recognized_text)
-        if (closestBeaconLocation.isNullOrEmpty()) {
-            popupMainView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_red_light))
-            messageTextView.text = getString(R.string.no_known_beacons_are_near_you)
-        } else {
-            popupMainView.setBackgroundColor(ContextCompat.getColor(this, android.R.color.holo_green_light))
-            messageTextView.text =
-                getString(
-                    R.string.gesture_in_room,
-                    getString(R.string.gesture_recognized, recognizedGesture),
-                    closestBeaconLocation
-                )
-        }
-
-        val vibrationEffect = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
-        vibrator.vibrate(vibrationEffect)
-
-        popupWindow.showAtLocation(popupView, Gravity.CENTER, 0, 0)
-
-        val fadeAfterMillis = 3000L
-        val handler = Handler(Looper.getMainLooper())
-        handler.postDelayed({
-            popupWindowFadeOut(popupWindow, popupView)
-        }, fadeAfterMillis)
-    }
-
-    private fun popupWindowFadeOut(popupWindow: PopupWindow, popupView: View) {
-        val animationDuration = 1000L // 1 second fadeout duration
-        val fadeOut = ObjectAnimator.ofFloat(popupView, "alpha", 1f, 0f)
-        fadeOut.duration = animationDuration
-        fadeOut.addListener(object : Animator.AnimatorListener {
-            override fun onAnimationStart(animation: Animator) {}
-            override fun onAnimationEnd(animation: Animator) {
-                popupWindow.dismiss()
-            }
-            override fun onAnimationCancel(animation: Animator) {}
-            override fun onAnimationRepeat(animation: Animator) {}
-        })
-        fadeOut.start()
     }
 
     // Needed to prevent mainActivity to be flooded with too many messages just for a single recognized gesture
@@ -342,6 +180,8 @@ class MainActivity : AppCompatActivity() {
     private fun startAppServices() {
         // enable accelerometer data gathering
         appIsRecording = true
+        Log.i(LOG_TAG, "Starting app services, setting appIsRecording to true")
+
         Toast.makeText(this, "Gesture recognition is active", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
@@ -356,11 +196,16 @@ class MainActivity : AppCompatActivity() {
         // Registering the gesture recognition broadcast receiver
         val gestureReceiverFilter = IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
         registerReceiver(knownGestureReceiver, gestureReceiverFilter, RECEIVER_NOT_EXPORTED)
+
+        uiManager.setupMainButton(true)
+        uiManager.setupMainButtonOnClickListener(appIsRecording, false)
     }
 
     private fun stopAppServices() {
         // stop accelerometer data gathering
         appIsRecording = false
+        Log.i(LOG_TAG, "Stopping app services, setting appIsRecording to false")
+
         Toast.makeText(this, "Gesture recognition is off", Toast.LENGTH_SHORT).show()
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         stopService(accelRecordingIntent)
@@ -376,21 +221,21 @@ class MainActivity : AppCompatActivity() {
 
         // Unregistering beacon updates receiver
         unregisterReceiver(beaconsUpdateReceiver)
+
+        uiManager.setupMainButton(false)
+        uiManager.setupMainButtonOnClickListener(appIsRecording, false)
     }
 
     private fun onPermissionsDenied() {
         Log.i(LOG_TAG, "onPermissionsDenied")
 
-        missingRequiredPermissionsView = true
-
-        // changing main button's style and behavior
-        setupMainButton()
-
-        // making where am i button invisible
-        setupWhereAmIButton()
+        // setting up buttons' styles and behavior
+        uiManager.setupMainButton(true)
+        uiManager.setupMainButtonOnClickListener(appIsRecording, true)
+        uiManager.setupWhereAmIButton(true, btBeaconManager, knownBeacons)
 
         // making text and button to go to settings visible
-        toggleSettingsNavigationUI(true)
+        uiManager.toggleSettingsNavigationUI(true)
 
         val grantMissingPermissionsButton: Button = findViewById(R.id.grantMissingPermissionsButton)
         grantMissingPermissionsButton.setOnClickListener {
