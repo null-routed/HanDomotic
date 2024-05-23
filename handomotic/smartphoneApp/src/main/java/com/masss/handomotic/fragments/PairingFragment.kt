@@ -24,8 +24,11 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import com.masss.handomotic.R
 import com.masss.handomotic.ScanActivity
+import com.masss.handomotic.models.PairedDevice
+import com.masss.handomotic.viewmodels.ConfigurationViewModel
 
 class PairingFragment : Fragment() {
 
@@ -33,6 +36,9 @@ class PairingFragment : Fragment() {
     private var lastWatchAddress: String = ""
     private lateinit var watchPairingButton : Button
     private lateinit var noWatchesPaired : TextView
+    private lateinit var watchName : TextView
+
+    private val configurationViewModel: ConfigurationViewModel by activityViewModels()
 
     private val ACTION_BLUETOOTH_SELECTED =
         "android.bluetooth.devicepicker.action.DEVICE_SELECTED"
@@ -55,14 +61,19 @@ class PairingFragment : Fragment() {
                     lastWatchAddress = device.address
 
                    if(lastWatchName == ""){
-                        noWatchesPaired.visibility = View.VISIBLE
+                       watchName.visibility = View.GONE
+                       noWatchesPaired.visibility = View.VISIBLE
                     } else {
                         Log.i("DEVICE_ADDRESS", lastWatchAddress)
                         Log.i("DEVICE_NAME", lastWatchName)
                         noWatchesPaired.visibility = View.GONE
+                        val msg = getString(R.string.pairedWatchMsg, lastWatchName)
+                        watchName.text = msg
+                        
+                       // Writing to file
+                       val pairedDevice = PairedDevice(lastWatchName, lastWatchAddress)
+                       configurationViewModel.addPairedDevice(pairedDevice, requireContext())
                     }
-                    Log.i("DEVICE_ADDRESS", device.address)
-                    Log.i("DEVICE_NAME", device.name)
                 }
             }
         }
@@ -80,10 +91,20 @@ class PairingFragment : Fragment() {
 
         // We have the need from the persistent storage, if any, the
         // address and name of the last paired smartwatch
-
         noWatchesPaired = view.findViewById(R.id.noWatches)
+        watchName = view.findViewById(R.id.watchName)
         watchPairingButton = view.findViewById(R.id.watchPairingButton)
 
+        val pairedDevice = configurationViewModel.getPairedDevice()
+        if(pairedDevice == null) {
+            watchName.visibility = View.GONE
+            noWatchesPaired.visibility = View.VISIBLE
+        } else{
+            noWatchesPaired.visibility = View.GONE
+            val msg = getString(R.string.pairedWatchMsg, pairedDevice.deviceName)
+            watchName.text = msg
+            watchName.visibility = View.VISIBLE
+        }
         watchPairingButton.setOnClickListener(){
             showBluetoothSearch(requireActivity())
         }

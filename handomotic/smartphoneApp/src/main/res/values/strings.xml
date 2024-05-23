@@ -8,4 +8,5 @@
     <string name="add_smartwatch">PAIR</string>
     <string name="noWatches"> No paired smartwatches</string>
     <string name="syncButton">SYNC</string>
+    <string name="pairedWatchMsg">Paired Watch: %s</string>
 </resources>
