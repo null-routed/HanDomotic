@@ -1,6 +1,7 @@
 package com.masss.handomotic.btsocket
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -59,6 +60,7 @@ class ClientThread(private var context: Context,
         }
     }
 
+    @SuppressLint("MissingPermission")
     override fun run(){
         Log.i(TAG, "Dentro run..")
         // Obtaining the bluetooth adapter
@@ -68,21 +70,6 @@ class ClientThread(private var context: Context,
         }
         // Creating the Bluetooth Socket
         device = adapter.getRemoteDevice(selAddress)
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.BLUETOOTH_CONNECT
-            ) != PackageManager.PERMISSION_GRANTED
-        ){
-            // Asks permissions if not granted
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                ActivityCompat.requestPermissions(
-                    context as Activity,
-                    arrayOf(Manifest.permission.BLUETOOTH_CONNECT),
-                    REQUEST_BLUETOOTH_PERMISSION
-                )
-            }
-            return
-        }
 
         // Connection using the Bluetooth socket
         try{

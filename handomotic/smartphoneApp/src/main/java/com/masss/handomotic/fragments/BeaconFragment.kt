@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.*
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
@@ -74,9 +75,15 @@ class BeaconFragment : Fragment() {
         syncButton.setOnClickListener{
             // Trying connection with BTSocket
             // Retrieving the current status of the beacon
-            val clientThread = ClientThread(requireContext(), "F0:8A:76:3F:F7:C5", configurationViewModel.getBeacons())
-            clientThread.start()
-            Log.i("ClientThread", "I'm started..")
+            val pairDevice = configurationViewModel.getPairedDevice()
+            if(pairDevice == null)
+            {
+                Toast.makeText(requireContext(), "Please pair device first!", Toast.LENGTH_LONG).show()
+            } else{
+                val clientThread = ClientThread(requireContext(), pairDevice.deviceAddress, configurationViewModel.getBeacons())
+                clientThread.start()
+                Log.i("ClientThread", "I'm started..")
+            }
         }
     }
 

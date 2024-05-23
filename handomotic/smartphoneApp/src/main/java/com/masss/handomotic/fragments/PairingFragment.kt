@@ -20,7 +20,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
-import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -89,7 +88,7 @@ class PairingFragment : Fragment() {
         val bluetoothPicker = Intent("android.bluetooth.devicepicker.action.LAUNCH")
         activity.startActivity(bluetoothPicker)
     }
-    
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
         // We have the need from the persistent storage, if any, the
