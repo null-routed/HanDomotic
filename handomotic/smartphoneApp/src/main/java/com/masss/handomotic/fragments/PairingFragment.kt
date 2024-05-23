@@ -50,12 +50,17 @@ class PairingFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_pairing, container, false)
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+
     private var bluetoothReceiver = object : BroadcastReceiver(){
         @SuppressLint("MissingPermission") // already checked when entered on the fragment
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent != null) {
-                val device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                val device: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                }
                 if (device != null) {
                     lastWatchName = device.name
                     lastWatchAddress = device.address
@@ -69,7 +74,7 @@ class PairingFragment : Fragment() {
                         noWatchesPaired.visibility = View.GONE
                         val msg = getString(R.string.pairedWatchMsg, lastWatchName)
                         watchName.text = msg
-                        
+
                        // Writing to file
                        val pairedDevice = PairedDevice(lastWatchName, lastWatchAddress)
                        configurationViewModel.addPairedDevice(pairedDevice, requireContext())
@@ -79,14 +84,12 @@ class PairingFragment : Fragment() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun showBluetoothSearch(activity: Activity) {
         activity.registerReceiver(bluetoothReceiver, IntentFilter(ACTION_BLUETOOTH_SELECTED))
         val bluetoothPicker = Intent("android.bluetooth.devicepicker.action.LAUNCH")
         activity.startActivity(bluetoothPicker)
     }
-
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
         // We have the need from the persistent storage, if any, the
