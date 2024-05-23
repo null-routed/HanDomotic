@@ -63,6 +63,7 @@ class PairingFragment : Fragment() {
                         Log.i("DEVICE_ADDRESS", lastWatchAddress)
                         Log.i("DEVICE_NAME", lastWatchName)
                         noWatchesPaired.visibility = View.GONE
+                       watchName.visibility = View.VISIBLE
                         val msg = getString(R.string.pairedWatchMsg, lastWatchName)
                         watchName.text = msg
 
