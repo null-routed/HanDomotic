@@ -2,6 +2,7 @@ package com.masss.smartwatchapp.presentation
 
 import android.animation.Animator
 import android.animation.ObjectAnimator
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -31,6 +32,7 @@ import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import android.widget.TextView
+import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
@@ -40,12 +42,6 @@ import java.util.UUID
 
 
 class MainActivity : AppCompatActivity() {
-
-    /*
-        TODO:
-        put all button logic in a separate class ?
-        make app keep running when screen is off (if mainButton is pressed)
-    */
 
     private val LOG_TAG: String = "HanDomotic"
 
@@ -90,6 +86,7 @@ class MainActivity : AppCompatActivity() {
         checkAndRequestPermissions()
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onResume() {
         super.onResume()
         Log.d(LOG_TAG, "onResume(): has been called")
@@ -263,6 +260,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val knownGestureReceiver = object : BroadcastReceiver() {
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
                 temporarilyStopKnownGestureReceiver()           // avoid receiving the following gestures for x seconds defined in 'delayGestureBroadcast'
@@ -274,6 +272,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("InflateParams")
     private fun showGestureRecognizedScreen(recognizedGesture: String) {
         val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_gesture_recognized, null)
@@ -365,14 +364,11 @@ class MainActivity : AppCompatActivity() {
 
         // Registering beacon updates receiver
         val beaconUpdatesFilter = IntentFilter("com.masss.smartwatchapp.BEACON_UPDATE")
-        registerReceiver(beaconsUpdateReceiver, beaconUpdatesFilter)
+        registerReceiver(beaconsUpdateReceiver, beaconUpdatesFilter, RECEIVER_NOT_EXPORTED)
 
         // Registering the gesture recognition broadcast receiver
         val gestureReceiverFilter = IntentFilter("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
-        registerReceiver(knownGestureReceiver, gestureReceiverFilter)
-
-        // Start listening for incoming packets from companion app (operations concerning beacon management)
-//        serverSocket.start()
+        registerReceiver(knownGestureReceiver, gestureReceiverFilter, RECEIVER_NOT_EXPORTED)
     }
 
     private fun stopAppServices() {
@@ -422,5 +418,17 @@ class MainActivity : AppCompatActivity() {
         intent.data = uri
 
         startActivity(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        // resources cleanup
+        val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
+        stopService(accelRecordingIntent)
+        svmClassifier.unregisterReceiver()
+        btBeaconManager.stopScanning()
+        unregisterReceiver(knownGestureReceiver)
+        unregisterReceiver(beaconsUpdateReceiver)
     }
 }
