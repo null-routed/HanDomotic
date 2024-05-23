@@ -38,6 +38,7 @@ import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerMa
 import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
 import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
 import com.masss.smartwatchapp.presentation.btsocket.ServerSocket
+import com.masss.smartwatchapp.presentation.utilities.PermissionHandler
 import java.util.UUID
 
 
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     // Tracker for the app state
     private var appIsRecording: Boolean = false
     private var missingRequiredPermissionsView: Boolean = false
+    private lateinit var permissionHandler: PermissionHandler
 
     // GESTURE RECEIVER MANAGEMENT
     private val gestureReceiverHandler = Handler(Looper.getMainLooper())
@@ -83,15 +85,19 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        checkAndRequestPermissions()
+        permissionHandler = PermissionHandler(this)
+        if (!permissionHandler.requestPermissionsAndCheck(requiredPermissions))
+            onPermissionsDenied()
+        else
+            onAllPermissionsGranted()
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onResume() {
         super.onResume()
         Log.d(LOG_TAG, "onResume(): has been called")
-        Log.i(LOG_TAG, allPermissionsGranted().toString())
-        if (allPermissionsGranted()) {
+        Log.i(LOG_TAG, permissionHandler.arePermissionsGranted(requiredPermissions).toString())
+        if (permissionHandler.arePermissionsGranted(requiredPermissions)) {
             missingRequiredPermissionsView = false
 
             // making text and button to go to settings invisible
@@ -112,9 +118,8 @@ class MainActivity : AppCompatActivity() {
 
             // Registering SVM BroadcastReceiver
             svmClassifier.registerReceiver()
-        } else {
+        } else
             Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_LONG).show()
-        }
     }
 
     private fun toggleButtonBackground(button: Button) {
@@ -122,27 +127,6 @@ class MainActivity : AppCompatActivity() {
             button.background = ContextCompat.getDrawable(this, R.drawable.power_off)
         else
             button.background = ContextCompat.getDrawable(this, R.drawable.power_on)
-    }
-
-    private fun checkAndRequestPermissions() {
-        val permissionsToBeRequested = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-
-        if (permissionsToBeRequested.isNotEmpty())
-             requestPermissionsLauncher.launch(permissionsToBeRequested.toTypedArray())
-        else
-            onAllPermissionsGranted()
-    }
-
-    private val requestPermissionsLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val deniedPermissions = permissions.filter { !it.value }.keys
-        if (deniedPermissions.isEmpty())
-            onAllPermissionsGranted()
-        else
-            onPermissionsDenied()
     }
 
     private fun toggleSettingsNavigationUI(visible: Boolean) {
@@ -155,12 +139,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             deniedPermissionAcceptText.visibility = View.GONE
             permissionsActivityButton.visibility = View.GONE
-        }
-    }
-
-    private fun allPermissionsGranted(): Boolean {
-        return requiredPermissions.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
@@ -226,7 +204,7 @@ class MainActivity : AppCompatActivity() {
             whereAmITextView.visibility = View.GONE
             whereAmIButton.visibility = View.GONE
         } else {
-            whereAmIButton.visibility = View.VISIBLE
+            whereAmITextView.visibility = View.VISIBLE
             whereAmIButton.visibility = View.VISIBLE
         }
 
@@ -409,6 +387,14 @@ class MainActivity : AppCompatActivity() {
         grantMissingPermissionsButton.setOnClickListener {
             openAppSettings()
         }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (permissionHandler.onRequestPermissionsResult(requestCode, permissions, grantResults))
+            onAllPermissionsGranted()
+        else
+            onPermissionsDenied()
     }
 
     private fun openAppSettings() {
