@@ -37,6 +37,7 @@ class ServerSocket(
 
     private fun handleReceivedData(jsonString: String) {
         try {
+            configurationViewModel.flushBeacons()
             val beacons = Json.decodeFromString<Array<Beacon>>(jsonString)
             for (beacon in beacons) {
                 configurationViewModel.addBeacon(beacon, context)

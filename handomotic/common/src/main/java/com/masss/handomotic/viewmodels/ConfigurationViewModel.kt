@@ -31,6 +31,10 @@ class ConfigurationViewModel : ViewModel() {
         return _beacons.value ?: emptyList()
     }
 
+    fun flushBeacons(){
+        _beacons.value?.clear()
+    }
+
     fun addPairedDevice(pairedDevice: PairedDevice, context: Context) {
         _pairedDevice.value = pairedDevice
         saveConfiguration(context)
