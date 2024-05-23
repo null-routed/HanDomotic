@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -30,17 +29,21 @@ import com.masss.smartwatchapp.R
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerRecordingService
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifier
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.constraintlayout.widget.ConstraintLayout
+import com.masss.handomotic.BTBeaconManager
+import com.masss.handomotic.models.Beacon
+import com.masss.handomotic.viewmodels.ConfigurationViewModel
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
-import com.masss.smartwatchapp.presentation.btbeaconmanager.BTBeaconManager
-import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
 import com.masss.smartwatchapp.presentation.btsocket.ServerSocket
 import com.masss.smartwatchapp.presentation.utilities.PermissionHandler
 import java.util.UUID
 
 
 class MainActivity : AppCompatActivity() {
+
+    private val configurationViewModel: ConfigurationViewModel by viewModels()
 
     private val LOG_TAG: String = "HanDomotic"
 
@@ -69,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        configurationViewModel.initialize(this)
 
         permissionHandler = PermissionHandler(this)
         if (!permissionHandler.requestPermissionsAndCheck())
@@ -95,7 +99,7 @@ class MainActivity : AppCompatActivity() {
             setupWhereAmIButton()
 
             if (!::svmClassifier.isInitialized) svmClassifier = SVMClassifier(this)
-            if (!::btBeaconManager.isInitialized) btBeaconManager = BTBeaconManager(this)
+            if (!::btBeaconManager.isInitialized) btBeaconManager = BTBeaconManager(this, configurationViewModel.getBeacons())
             if (!::accelerometerManager.isInitialized) accelerometerManager = AccelerometerManager(this)
 
             // Registering accelerometer receiver
@@ -176,7 +180,7 @@ class MainActivity : AppCompatActivity() {
         svmClassifier = SVMClassifier(this)
 
         // initializing the BT manager
-        btBeaconManager = BTBeaconManager(this)
+        btBeaconManager = BTBeaconManager(this, configurationViewModel.getBeacons())
         btBeaconManager.startScanning()
 
         // initializing the list of known beacons from file on device persistent memory
@@ -196,7 +200,7 @@ class MainActivity : AppCompatActivity() {
         accelerometerManager = AccelerometerManager(this)
 
         // Start listening for config updates from companion app
-        beaconsUpdateThread = ServerSocket(this, serverSocketUUID)
+        beaconsUpdateThread = ServerSocket(this, serverSocketUUID, configurationViewModel)
         beaconsUpdateThread.start()
 
     }

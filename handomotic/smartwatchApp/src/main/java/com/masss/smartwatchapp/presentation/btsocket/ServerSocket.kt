@@ -11,8 +11,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
+import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
-import com.masss.smartwatchapp.presentation.btbeaconmanager.Beacon
+import com.masss.handomotic.models.Beacon
+import com.masss.handomotic.viewmodels.ConfigurationViewModel
 import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.io.InputStream
@@ -21,7 +23,8 @@ import java.util.UUID
 
 class ServerSocket(
     private var context: Context,
-    private val uuid: UUID)
+    private val uuid: UUID,
+    private val configurationViewModel: ConfigurationViewModel)
         : Thread() {
 
     companion object {
@@ -35,6 +38,10 @@ class ServerSocket(
     private fun handleReceivedData(jsonString: String) {
         try {
             val beacons = Json.decodeFromString<Array<Beacon>>(jsonString)
+            for (beacon in beacons) {
+                configurationViewModel.addBeacon(beacon, context)
+            }
+
             val beaconsAsStr = beacons.joinToString(separator = ",")
             Log.i("ReceiveThread", beaconsAsStr)
             // Update the configuration file with the changes
@@ -48,7 +55,7 @@ class ServerSocket(
 
     private fun receiveData() {
         try {
-            val buffer = ByteArray(1024)
+            val buffer = ByteArray(4096)
 
             // Read from the InputStream
             val bytes: Int = inputStream.read(buffer)

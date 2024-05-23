@@ -25,6 +25,11 @@ class BTBeaconManager(
     private var proximityManager: ProximityManager? = null
     private val beaconsMap = mutableMapOf<String, Beacon>()
 
+    constructor(
+        context: Context,
+        knownBeacons: List<Beacon>
+    ) : this(context, knownBeacons.associateBy { it.address }.toMutableMap())
+
     init {
         KontaktSDK.initialize("123")
         setupProximityManager()
