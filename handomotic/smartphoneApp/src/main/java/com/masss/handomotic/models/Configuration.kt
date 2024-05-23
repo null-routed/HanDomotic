@@ -4,6 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Configuration (
-    val pairedDevice: PairedDevice,
+    val pairedDevice: PairedDevice?,
     val beacons: List<Beacon>
 )

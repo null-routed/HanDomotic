@@ -2,35 +2,34 @@ package com.masss.handomotic.filesocket
 
 import android.content.Context
 import com.masss.handomotic.models.Beacon
+import com.masss.handomotic.models.Configuration
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.FileNotFoundException
 
-// This is an utility class that writes in an append only file the association between
-// beacon's address and room name
-class FileManager() {
+class FileManager {
 
-    companion object{
-        fun readConfiguration(context: Context): MutableList<Beacon> {
+    companion object {
+        fun readConfiguration(context: Context): Configuration? {
             val json = Json { prettyPrint = true }
-            try {
-                context.openFileInput("room_config.json").use { inputStream ->
+            return try {
+                context.openFileInput("config.json").use { inputStream ->
                     val jsonString = inputStream.bufferedReader().use { reader -> reader.readText() }
-                    val loadedBeacons = json.decodeFromString(ListSerializer(Beacon.serializer()), jsonString).toMutableList()
-                    return loadedBeacons
+                    json.decodeFromString(Configuration.serializer(), jsonString)
                 }
             } catch (e: FileNotFoundException) {
                 println("Configuration file not found")
+                Configuration(pairedDevice = null, beacons = emptyList())
             } catch (e: Exception) {
                 println("Error reading configuration file: ${e.message}")
+                Configuration(pairedDevice = null, beacons = emptyList())
             }
-            return mutableListOf()
         }
 
-        fun writeConfiguration(context: Context, beacons: List<Beacon>) {
+        fun writeConfiguration(context: Context, configuration: Configuration) {
             val json = Json { prettyPrint = true }
-            val jsonString = json.encodeToString(ListSerializer(Beacon.serializer()), beacons)
-            context.openFileOutput("room_config.json", Context.MODE_PRIVATE).use {
+            val jsonString = json.encodeToString(Configuration.serializer(), configuration)
+            context.openFileOutput("config.json", Context.MODE_PRIVATE).use {
                 it.write(jsonString.toByteArray())
             }
         }
