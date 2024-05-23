@@ -1,8 +1,5 @@
 package com.masss.handomotic
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -10,10 +7,6 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import androidx.activity.ComponentActivity
-import androidx.activity.enableEdgeToEdge
-import androidx.annotation.RequiresApi
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import com.masss.handomotic.databinding.ScanActivityBinding
 import com.masss.handomotic.models.Beacon
 
@@ -32,14 +25,18 @@ class ScanActivity : ComponentActivity() {
         const val TAG = "BTBeaconManager"
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ScanActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.greeting.text = " Wake up, samurai! "
 
-        val knownBeaconsList : List<Beacon> = intent.getParcelableArrayListExtra("beacons", Beacon::class.java).orEmpty()
+        val knownBeaconsList: List<Beacon> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableArrayListExtra("beacons", Beacon::class.java).orEmpty()
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableArrayListExtra<Beacon>("beacons").orEmpty()
+        }
         val knownBeaconsMap = knownBeaconsList.associateBy { it.address }.toMutableMap()
 
         // create the beacon manager instance for Bluetooth scanning
