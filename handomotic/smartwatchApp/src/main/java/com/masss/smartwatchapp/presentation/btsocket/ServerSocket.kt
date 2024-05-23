@@ -34,13 +34,10 @@ class ServerSocket(
 
     private fun handleReceivedData(jsonString: String) {
         try {
-            val beacon = Json.decodeFromString<Array<Beacon>>(jsonString)
-
-            Log.i("ReceiveThread", "Received beacon: $beacon")
-
+            val beacons = Json.decodeFromString<Array<Beacon>>(jsonString)
+            val beaconsAsStr = beacons.joinToString(separator = ",")
+            Log.i("ReceiveThread", beaconsAsStr)
             // Update the configuration file with the changes
-
-
             // notify main activity to update known beacons
             val beaconUpdateIntent = Intent("com.masss.smartwatchapp.BEACON_UPDATE")
             context.sendBroadcast(beaconUpdateIntent)
