@@ -18,7 +18,8 @@ import java.util.concurrent.TimeUnit
 
 class BTBeaconManager(
     private val context: Context,
-    private val knownBeacons : MutableMap<String, Beacon>
+    private val knownBeacons : MutableMap<String, Beacon>,
+    private val uiUpdateCallback: Runnable? = null
 ) {
 
     private val tag = "BTBeaconManager"
@@ -83,7 +84,7 @@ class BTBeaconManager(
             ?.scanPeriod(ScanPeriod.RANGING)
             //?.activityCheckConfiguration(ActivityCheckConfiguration.DISABLED)
             //?.forceScanConfiguration(ForceScanConfiguration.DISABLED)
-            ?.deviceUpdateCallbackInterval(TimeUnit.SECONDS.toMillis(5))
+            ?.deviceUpdateCallbackInterval(TimeUnit.MILLISECONDS.toMillis(100))
             ?.rssiCalculator(RssiCalculators.DEFAULT)
             //?.cacheFileName("Example")
             ?.resolveShuffledInterval(3)
@@ -101,6 +102,7 @@ class BTBeaconManager(
             override fun onIBeaconDiscovered(iBeacon: IBeaconDevice, region: IBeaconRegion) {
                 Log.i(tag, "onIBeaconDiscovered: $iBeacon")
                 addBeacon(iBeacon)
+                uiUpdateCallback?.run()
             }
 
             override fun onIBeaconsUpdated(iBeacons: List<IBeaconDevice>, region: IBeaconRegion) {
@@ -108,12 +110,14 @@ class BTBeaconManager(
                 iBeacons.forEach {
                     setRssi(it)
                 }
+                uiUpdateCallback?.run()
                 //Log.i(tag, "Nearest is: " + getBeacons().values.sortedBy { it.rssi }[0])
             }
 
             override fun onIBeaconLost(iBeacon: IBeaconDevice, region: IBeaconRegion) {
                 Log.e(tag, "onIBeaconLost: $iBeacon")
                 removeBeacon(iBeacon)
+                uiUpdateCallback?.run()
             }
         }
     }

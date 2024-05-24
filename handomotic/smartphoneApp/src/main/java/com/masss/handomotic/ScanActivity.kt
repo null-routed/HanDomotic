@@ -17,9 +17,6 @@ class ScanActivity : ComponentActivity() {
     private lateinit var beaconManager: BTBeaconManager
     private var wasScanning = false
 
-    private lateinit var updateHandler: Handler
-    private lateinit var updateRunnable: Runnable
-
     companion object {
         const val REQUEST_CODE_PERMISSIONS: Int = 100
         const val TAG = "BTBeaconManager"
@@ -40,18 +37,9 @@ class ScanActivity : ComponentActivity() {
         val knownBeaconsMap = knownBeaconsList.associateBy { it.address }.toMutableMap()
 
         // create the beacon manager instance for Bluetooth scanning
-        beaconManager = BTBeaconManager(this, knownBeaconsMap)
+        beaconManager = BTBeaconManager(this, knownBeaconsMap, ::updateRecyclerView)
+
         beaconManager.stopScanning()
-
-
-        // set up the recycler view
-        updateHandler = Handler(Looper.getMainLooper())
-        updateRunnable = Runnable {
-            // Update the RecyclerView
-            updateRecyclerView()
-            // Schedule the next update
-            updateHandler.postDelayed(updateRunnable, 1000) // Aggiorna ogni secondo
-        }
 
         binding.scanningSwitch.setOnClickListener {
             if (beaconManager.isScanning()) {
@@ -113,7 +101,6 @@ class ScanActivity : ComponentActivity() {
         binding.greeting.text = "Scanning..."
         binding.scanningProgress.visibility = View.VISIBLE
         beaconManager.startScanning()
-        updateHandler.post(updateRunnable)
     }
 
     private fun stopBeaconScan() {
@@ -121,6 +108,5 @@ class ScanActivity : ComponentActivity() {
         binding.greeting.text = "Not scanning"
         binding.scanningProgress.visibility = View.GONE
         beaconManager.stopScanning()
-        updateHandler.removeCallbacks(updateRunnable)
     }
 }
