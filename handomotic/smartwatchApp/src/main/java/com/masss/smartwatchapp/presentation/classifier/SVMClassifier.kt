@@ -8,8 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
-import androidx.core.util.Predicate
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.masss.smartwatchapp.R
 import java.nio.FloatBuffer
 
@@ -23,7 +21,7 @@ class SVMClassifier(private val context: Context) {
 
     // This function computes the highest class probability given a confidence Array<FloatArray>
     private fun computeMaxFloatArray(matrix: Array<FloatArray>) : Float{
-        var max : Float = 0.0f
+        var max  = 0.0f
         for(row in matrix){
             for (value in row){
                 if(value >= max)
@@ -56,11 +54,7 @@ class SVMClassifier(private val context: Context) {
         val confidence = computeMaxFloatArray(confidenceMatrix)
         val predictionVector = results[0].value as Array<String>
 
-        val prediction : String
-        if(confidence < threshold)
-            prediction = "No Gesture"
-        else
-            prediction = predictionVector[0]
+        val prediction = if(confidence < threshold)  "No Gesture" else predictionVector[0]
 
         // send broadcast to mainActivity to notify a known hand gesture has been performed
         if (prediction in knownGestures)

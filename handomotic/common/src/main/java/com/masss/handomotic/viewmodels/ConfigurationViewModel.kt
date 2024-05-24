@@ -40,11 +40,6 @@ class ConfigurationViewModel : ViewModel() {
         saveConfiguration(context)
     }
 
-    fun removePairedDevice(context: Context) {
-        _pairedDevice.value = null
-        saveConfiguration(context)
-    }
-
     fun getPairedDevice(): PairedDevice? {
         return _pairedDevice.value
     }

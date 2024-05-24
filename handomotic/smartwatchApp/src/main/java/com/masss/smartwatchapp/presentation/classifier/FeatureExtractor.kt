@@ -63,30 +63,7 @@ class FeatureExtractor {
 
         private fun FloatArray.standardDeviation(): Double {
             val mean = this.average()
-            return sqrt(this.fold(0.0, { acc, d -> acc + (d - mean).pow(2.0) }) / this.size)
-        }
-
-        private fun FloatArray.zeroCrossings(): Int {
-            var count = 0
-            for (i in 1 until this.size) {
-                if (this[i - 1] * this[i] < 0) {
-                    count++
-                }
-            }
-            return count
-        }
-
-        // This function computes the highest class probability given a confidence Array<FloatArray>
-        private fun computeMaxFloatArray(matrix: Array<FloatArray>) : Float{
-            var max : Float = 0.0f
-            for(row in matrix){
-                for (value in row){
-                    if(value >= max){
-                        max = value
-                    }
-                }
-            }
-            return max
+            return sqrt(this.fold(0.0) { acc, d -> acc + (d - mean).pow(2.0) } / this.size)
         }
 
         private fun extractFrequencyFeatures(data: FloatArray): FloatArray {

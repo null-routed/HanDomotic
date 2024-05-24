@@ -104,7 +104,7 @@ class BeaconFragment : Fragment() {
                 data?.getParcelableArrayListExtra("new_beacon", Beacon::class.java)
             } else {
                 @Suppress("DEPRECATION")
-                data?.getParcelableArrayListExtra<Beacon>("new_beacon")
+                data?.getParcelableArrayListExtra("new_beacon")
             }
             if (newBeacon != null) {
                 configurationViewModel.addBeacon(newBeacon.first(), requireContext())

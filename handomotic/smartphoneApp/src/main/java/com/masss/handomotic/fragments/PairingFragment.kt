@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -31,7 +30,7 @@ class PairingFragment : Fragment() {
 
     private val configurationViewModel: ConfigurationViewModel by activityViewModels()
 
-    private val ACTION_BLUETOOTH_SELECTED =
+    private val actionBluetoothSelected =
         "android.bluetooth.devicepicker.action.DEVICE_SELECTED"
 
     override fun onCreateView(
@@ -50,7 +49,7 @@ class PairingFragment : Fragment() {
                     intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
                 } else {
                     @Suppress("DEPRECATION")
-                    intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
                 }
                 if (device != null) {
                     lastWatchName = device.name
@@ -60,10 +59,8 @@ class PairingFragment : Fragment() {
                        watchName.visibility = View.GONE
                        noWatchesPaired.visibility = View.VISIBLE
                     } else {
-                        Log.i("DEVICE_ADDRESS", lastWatchAddress)
-                        Log.i("DEVICE_NAME", lastWatchName)
                         noWatchesPaired.visibility = View.GONE
-                       watchName.visibility = View.VISIBLE
+                        watchName.visibility = View.VISIBLE
                         val msg = getString(R.string.pairedWatchMsg, lastWatchName)
                         watchName.text = msg
 
@@ -76,8 +73,8 @@ class PairingFragment : Fragment() {
         }
     }
 
-    fun showBluetoothSearch(activity: Activity) {
-        activity.registerReceiver(bluetoothReceiver, IntentFilter(ACTION_BLUETOOTH_SELECTED))
+    private fun showBluetoothSearch(activity: Activity) {
+        activity.registerReceiver(bluetoothReceiver, IntentFilter(actionBluetoothSelected))
         val bluetoothPicker = Intent("android.bluetooth.devicepicker.action.LAUNCH")
         activity.startActivity(bluetoothPicker)
     }
@@ -100,7 +97,7 @@ class PairingFragment : Fragment() {
             watchName.text = msg
             watchName.visibility = View.VISIBLE
         }
-        watchPairingButton.setOnClickListener(){
+        watchPairingButton.setOnClickListener {
             showBluetoothSearch(requireActivity())
         }
 
