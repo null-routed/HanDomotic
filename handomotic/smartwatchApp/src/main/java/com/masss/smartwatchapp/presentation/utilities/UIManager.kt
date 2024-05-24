@@ -98,7 +98,9 @@ class UIManager(
         if (knownBeacons.isNullOrEmpty() || closeBTBeacons.isEmpty())
             return null
 
-        // Sorting correctly the scan results ordering for the nearest beacon first
+        val knownBeaconsMap = knownBeacons.associateBy { it.address }
+
+        // Sorting the scan results, ordering for the nearest beacon first
         val sortedEntries = closeBTBeacons.entries
             .sortedByDescending { it.value.rssi }
 
@@ -107,13 +109,12 @@ class UIManager(
 
         Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ","))
 
-        for(beacon in closeBTBeacons){
-            for(knownBeacon in knownBeacons){
-                if(beacon.value.address == knownBeacon.address){
-                    return knownBeacon.name
-                }
+        for (beacon in closeBTBeacons.values) {
+            knownBeaconsMap[beacon.address]?.let {
+                return it.name
             }
         }
+
         return null
     }
 
