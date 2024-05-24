@@ -64,7 +64,7 @@ class UIManager(
     fun setupWhereAmIButton(
         missingRequiredPermissionsView: Boolean,
         btBeaconManager: BTBeaconManager,
-        knownBeacons: MutableMap<String, Beacon>?)
+        knownBeacons: List<Beacon>?)
     {
         val whereAmIButton: Button = activity.findViewById(R.id.whereAmIButton)
         val whereAmITextView: TextView = activity.findViewById(R.id.whereAmIText)
@@ -94,20 +94,31 @@ class UIManager(
         }
     }
 
-    private fun getCurrentRoom(closeBTBeacons: MutableMap<String, Beacon>, knownBeacons: MutableMap<String, Beacon>?): String? {
+    private fun getCurrentRoom(closeBTBeacons: MutableMap<String, Beacon>, knownBeacons: List<Beacon>?): String? {
         if (knownBeacons.isNullOrEmpty() || closeBTBeacons.isEmpty())
             return null
 
-        for ((room, knownBeacon) in knownBeacons) {
-            if (closeBTBeacons.containsKey(knownBeacon.address))
-                return room
-        }
+        // Sorting correctly the scan results ordering for the nearest beacon first
+        val sortedEntries = closeBTBeacons.entries
+            .sortedByDescending { it.value.rssi }
 
+        closeBTBeacons.clear()
+        closeBTBeacons.putAll(sortedEntries.associate { it.toPair() })
+
+        Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ","))
+
+        for(beacon in closeBTBeacons){
+            for(knownBeacon in knownBeacons){
+                if(beacon.value.address == knownBeacon.address){
+                    return knownBeacon.name
+                }
+            }
+        }
         return null
     }
 
     @SuppressLint("InflateParams")
-    fun showGestureRecognizedScreen(recognizedGesture: String, btBeaconManager: BTBeaconManager, knownBeacons: MutableMap<String, Beacon>?) {
+    fun showGestureRecognizedScreen(recognizedGesture: String, btBeaconManager: BTBeaconManager, knownBeacons: List<Beacon>?) {
         val inflater = activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_gesture_recognized, null)
 

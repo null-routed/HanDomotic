@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity() {
 
     // BT MANAGEMENT AND SCANNING
     private lateinit var btBeaconManager: BTBeaconManager
-    private var knownBeacons: MutableMap<String, Beacon>? = null
+    private lateinit var knownBeacons: List<Beacon>
     private var serverSocketUUID: UUID = UUID.fromString("bffdf9d2-048d-45cb-b621-3025760dc306")
     private lateinit var beaconsUpdateThread: ServerSocket
 
@@ -72,6 +72,8 @@ class MainActivity : AppCompatActivity() {
 
         // initializing the server socket for beacon updates
         beaconsUpdateThread = ServerSocket(this, serverSocketUUID, configurationViewModel)
+
+
 
         // requesting permissions
         permissionHandler = PermissionHandler(this)
@@ -131,8 +133,9 @@ class MainActivity : AppCompatActivity() {
         btBeaconManager.startScanning()
 
         // initializing the list of known beacons from file on device persistent memory
-        knownBeacons = btBeaconManager.getKnownBeacons()
-        Log.i(LOG_TAG, "Found ${knownBeacons?.size} known beacons")
+        configurationViewModel.initialize(this)
+        knownBeacons = configurationViewModel.getBeacons()
+        Log.i(LOG_TAG, "Found ${knownBeacons.size} known beacons")
 
         // setting up onclick listeners on activity creation for main and whereAmI buttons
         uiManager.setupMainButton(false)
@@ -171,7 +174,8 @@ class MainActivity : AppCompatActivity() {
     // whenever a beacon update is received from the companion app, update the known beacons list, something might have changed
     private val beaconsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            knownBeacons = btBeaconManager.getKnownBeacons()            // simply reading again the file
+            knownBeacons = configurationViewModel.getBeacons() // simply reading again the file
+           // knownBeacons = btBeaconManager.getKnownBeacons()
         }
     }
 
