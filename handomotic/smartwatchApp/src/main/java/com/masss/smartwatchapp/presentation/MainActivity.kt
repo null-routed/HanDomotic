@@ -231,6 +231,7 @@ class MainActivity : AppCompatActivity() {
     private fun onPermissionsDenied() {
         Log.i(LOG_TAG, "onPermissionsDenied")
 
+        knownBeacons = emptyList()
         // setting up buttons' styles and behavior
         uiManager.setupMainButton(true)
         uiManager.setupMainButtonOnClickListener(appIsRecording, true)
