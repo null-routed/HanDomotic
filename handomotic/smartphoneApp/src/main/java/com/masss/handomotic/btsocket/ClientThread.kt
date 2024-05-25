@@ -11,6 +11,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import com.masss.handomotic.models.Beacon
 import java.io.IOException
@@ -55,8 +56,21 @@ class ClientThread(private var context: Context,
         try{
             outputStream = socket.outputStream
             sendBeacon(config)
+            (context as Activity).runOnUiThread {
+                Toast.makeText(
+                    context,
+                    "Configuration correctly synced",
+                    Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception){
-            e.printStackTrace()
+            (context as Activity).runOnUiThread {
+                Toast.makeText(
+                    context,
+                    "Something went wrong, please try again",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+                e.printStackTrace()
         }
     }
 
@@ -79,6 +93,13 @@ class ClientThread(private var context: Context,
             socket.connect()
             manageConnectedSocket()
         }catch(e: IOException){
+            (context as Activity).runOnUiThread {
+                Toast.makeText(
+                    context,
+                    "Something went wrong, please try again",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
             Log.e(TAG, "Error during connection", e)
         }
     }
