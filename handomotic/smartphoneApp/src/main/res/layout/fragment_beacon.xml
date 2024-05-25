@@ -5,7 +5,7 @@
     android:id="@+id/frameLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#E3F2FD"
+    android:background="@color/light_teal"
     tools:context=".BeaconFragment">
 
     <TextView
@@ -14,7 +14,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="@string/noBeacons"
-        android:visibility="invisible"
+        android:textSize="20sp"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="@+id/beaconsRecyclerView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -33,26 +35,27 @@
 
     <Button
         android:id="@+id/add_new_devices"
-        android:layout_width="wrap_content"
-        android:layout_height="71dp"
+        android:layout_width="120dp"
+        android:layout_height="70dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/rounded_button"
         android:text="@string/add_new_devices"
         android:textSize="28sp"
-        android:layout_marginEnd="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.969" />
 
     <Button
         android:id="@+id/syncButton"
-        android:layout_width="wrap_content"
-        android:layout_height="76dp"
-        android:drawableLeft="@drawable/ic_sync"
-        android:paddingStart="8dp"
-        android:text="@string/syncButton"
+        android:layout_width="120dp"
+        android:layout_height="70dp"
         android:layout_marginStart="16dp"
-        app:layout_constraintStart_toStartOf="parent"
+        android:background="@drawable/rounded_button"
+        android:drawableLeft="@drawable/ic_sync"
+        android:text="@string/syncButton"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.969" />
 
