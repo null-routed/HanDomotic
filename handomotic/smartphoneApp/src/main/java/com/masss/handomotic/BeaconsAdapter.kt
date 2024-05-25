@@ -11,7 +11,6 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.masss.handomotic.models.Beacon
-import com.masss.handomotic.filesocket.FileManager
 
 class BeaconsAdapter(private var beaconManager: BTBeaconManager, private val activity: Activity) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
 
@@ -39,7 +38,7 @@ class BeaconsAdapter(private var beaconManager: BTBeaconManager, private val act
         holder.beaconRssi.text = beacon.rssi.toString()
 
         // Handler that is executed when the line is pressed
-        holder.itemView.setOnClickListener() {
+        holder.itemView.setOnClickListener {
             Log.i("ROW", "Row $position pressed...")
 
             // Inflating the popup_room layout

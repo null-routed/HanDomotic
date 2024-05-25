@@ -2,11 +2,8 @@ package com.masss.handomotic
 
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.View
-import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
 import com.masss.handomotic.databinding.ScanActivityBinding
 import com.masss.handomotic.models.Beacon
