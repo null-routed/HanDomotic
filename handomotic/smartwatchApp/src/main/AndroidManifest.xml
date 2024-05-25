@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
     <!-- ACCELEROMETER DATA GATHERING PERMISSIONS -->
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <!-- BLUETOOTH SCANNING PERMISSIONS -->
@@ -42,7 +44,8 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".presentation.accelerometermanager.AccelerometerRecordingService" />
+        <service android:name=".presentation.accelerometermanager.AccelerometerRecordingService" android:foregroundServiceType="specialUse" android:exported="false" />
+        <service android:name=".presentation.classifier.SVMClassifierService" android:foregroundServiceType="specialUse" android:exported="false"/>
         <service android:name="com.kontakt.sdk.android.ble.service.ProximityService" android:exported="false" />
     </application>
 
