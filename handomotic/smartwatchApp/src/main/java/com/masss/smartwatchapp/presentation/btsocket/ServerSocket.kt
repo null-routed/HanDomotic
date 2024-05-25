@@ -35,7 +35,7 @@ class ServerSocket(
     private lateinit var inputStream: InputStream
 
     @Volatile
-    private var running = false
+    private var running = true
 
     private fun handleReceivedData(jsonString: String) {
         try {
