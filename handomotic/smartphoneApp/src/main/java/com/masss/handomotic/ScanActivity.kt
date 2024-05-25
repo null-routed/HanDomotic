@@ -98,14 +98,14 @@ class ScanActivity : AppCompatActivity() {
 
     private fun startBeaconScan() {
         Log.i(TAG, "Start scanning")
-        binding.greeting.text = "Scanning..."
+        binding.greeting.text = getString(R.string.startBeaconScan)
         binding.scanningProgress.visibility = View.VISIBLE
         beaconManager.startScanning()
     }
 
     private fun stopBeaconScan() {
         Log.i(TAG, "Stop scanning")
-        binding.greeting.text = "Not scanning"
+        binding.greeting.text = getString(R.string.stopBeaconScan)
         binding.scanningProgress.visibility = View.INVISIBLE
         beaconManager.stopScanning()
     }

@@ -80,10 +80,6 @@ class AccelerometerRecordingService : Service(), SensorEventListener {
         sensorManager.unregisterListener(this)     // Unregistering sensor listener
     }
 
-    fun stopService() {
-        stopForeground(true)
-        stopSelf()
-    }
 
     private fun broadcastAccelerometerData(xValue: Float, yValue: Float, zValue: Float, timestamp: Long) {
         val intent = Intent("AccelerometerData")

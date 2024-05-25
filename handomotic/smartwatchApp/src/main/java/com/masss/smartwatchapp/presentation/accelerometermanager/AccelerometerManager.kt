@@ -23,14 +23,14 @@ class AccelerometerManager(private val context: Context) {
 
     private fun addSample(xValue: Float, yValue: Float, zValue: Float) {
         if (xWindow.size >= bufferSize) {
-            xWindow.removeFirst() // removing at the head
-            yWindow.removeFirst() // we can remove also y and z as they are of the same size of x
-            zWindow.removeFirst()
+            xWindow.removeLast() // removing at the tail
+            yWindow.removeLast() // we can remove also y and z as they are of the same size of x
+            zWindow.removeLast()
         }
-        // The tail is added in any case
-        xWindow.addLast(xValue)
-        yWindow.addLast(yValue)
-        zWindow.addLast(zValue)
+        // The head is added in any case
+        xWindow.addFirst(xValue)
+        yWindow.addFirst(yValue)
+        zWindow.addFirst(zValue)
     }
 
     // Broadcasts features to the classifier

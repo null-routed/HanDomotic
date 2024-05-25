@@ -10,4 +10,6 @@
     <string name="syncButton">SYNC</string>
     <string name="pairedWatchMsg">Paired Watch:</string>
     <string name="greetings">Start a scan to find new beacons</string>
+    <string name="startBeaconScan">Scanning…</string>
+    <string name="stopBeaconScan">Not scanning</string>
 </resources>

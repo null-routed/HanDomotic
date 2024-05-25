@@ -14,7 +14,7 @@ import com.masss.handomotic.models.Beacon
 
 class BeaconsAdapter(private var beaconManager: BTBeaconManager, private val activity: Activity) : RecyclerView.Adapter<BeaconsAdapter.BeaconsHolder>() {
 
-    class BeaconsHolder(private val row: View) : RecyclerView.ViewHolder(row) {
+    class BeaconsHolder(row: View) : RecyclerView.ViewHolder(row) {
         val beaconAddress: TextView = row.findViewById(R.id.beacon_address)
         val beaconUuid: TextView = row.findViewById(R.id.beacon_uuid)
         val beaconRssi: TextView = row.findViewById(R.id.beacon_rssi)
@@ -29,7 +29,7 @@ class BeaconsAdapter(private var beaconManager: BTBeaconManager, private val act
 
         val beacons = beaconManager.getUnknownBeacons().values.sortedBy { it.rssi?.times(-1) }
 
-        Log.i("UKNOWN_BEACONS", "Beacons: ${beaconManager.getUnknownBeacons()}")
+        Log.i("UNKNOWN_BEACONS", "Beacons: ${beaconManager.getUnknownBeacons()}")
         Log.i("KNOWN_BEACONS", "Beacons: ${beaconManager.getKnownBeacons()}")
 
         val beacon = beacons[position]

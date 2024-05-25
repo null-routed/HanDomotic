@@ -88,7 +88,7 @@ class FeatureExtractor {
                 val im = if (i == 0 || 2*i == n - 1) 0.0f else fftData[2*i + 1] // Imaginary part
                 val mag = re*re + im*im
                 spectralEnergy += mag
-                totalMagnitude += Math.sqrt(mag.toDouble())
+                totalMagnitude += sqrt(mag.toDouble())
             }
             spectralEnergy /= n
 
@@ -97,7 +97,7 @@ class FeatureExtractor {
             for (i in 0 until n/2) {
                 val re = fftData[2*i]
                 val im = if (i == 0 || 2*i == n - 1) 0.0f else fftData[2*i + 1]
-                val mag = Math.sqrt((re*re + im*im).toDouble())
+                val mag = sqrt((re*re + im*im).toDouble())
                 spectralCentroid += freqs[i] * mag
             }
             spectralCentroid /= totalMagnitude

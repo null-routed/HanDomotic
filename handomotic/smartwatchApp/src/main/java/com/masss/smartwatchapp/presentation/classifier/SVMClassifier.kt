@@ -3,10 +3,13 @@ package com.masss.smartwatchapp.presentation.classifier
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Context.RECEIVER_NOT_EXPORTED
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.masss.smartwatchapp.R
@@ -65,7 +68,6 @@ class SVMClassifier(private val context: Context) {
     }
 
     private fun sendKnownGestureBroadcast(prediction: String) {
-//        Log.i("SVM_CLASSIFIER", "Sending broadcast to SVMClassifierService")
         val intent = Intent("SVMClassifier_RecognizedGesture")
         intent.putExtra("Prediction", prediction)
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
@@ -91,10 +93,15 @@ class SVMClassifier(private val context: Context) {
         }
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun registerReceiver() {
         if (!isReceiverRegister) {
             val filter = IntentFilter("FeatureList")
-            context.registerReceiver(featureReceiver, filter)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(featureReceiver, filter, RECEIVER_NOT_EXPORTED)
+            }else {
+                context.registerReceiver(featureReceiver, filter)
+            }
             isReceiverRegister = true
         }
     }

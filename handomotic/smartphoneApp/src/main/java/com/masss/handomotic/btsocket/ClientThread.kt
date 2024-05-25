@@ -21,7 +21,7 @@ import kotlinx.serialization.json.Json
 class ClientThread(private var context: Context,
     private val selAddress : String, private val config: List<Beacon>) : Thread(){
 
-    private val TAG : String = "SERIALIZER"
+    private val tag : String = "serializer"
     /* This UUID is randomly generated at https://www.guidgenerator.com/ */
     private val uuid: UUID = UUID.fromString("bffdf9d2-048d-45cb-b621-3025760dc306")
 
@@ -30,9 +30,6 @@ class ClientThread(private var context: Context,
     private lateinit var socket: BluetoothSocket
     private lateinit var outputStream: OutputStream
 
-    companion object {
-        private const val REQUEST_BLUETOOTH_PERMISSION = 1001
-    }
 
     // This function makes the serialization of the Beacon object in JSON format
     private fun sendBeacon(beacon: List<Beacon>){
@@ -41,13 +38,13 @@ class ClientThread(private var context: Context,
             // Converting the jsonString into bytes to flow them in the OutputStream
             val bytes = jsonString.toByteArray()
             outputStream.write(bytes)
-            Log.i(TAG, "Configuration sent")
+            Log.i(tag, "Configuration sent")
         }catch (e: IOException){
             e.printStackTrace()
         }
     }
 
-    // This method is called once the connection is estabilished
+    // This method is called once the connection is established
     private fun manageConnectedSocket(){
         try{
             outputStream = socket.outputStream
@@ -72,7 +69,6 @@ class ClientThread(private var context: Context,
 
     @SuppressLint("MissingPermission")
     override fun run(){
-        Log.i(TAG, "Dentro run..")
         // Obtaining the bluetooth adapter
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager?
         if(manager != null){
@@ -85,7 +81,7 @@ class ClientThread(private var context: Context,
         try{
             socket = device.createRfcommSocketToServiceRecord(uuid)
             adapter.cancelDiscovery()
-            Log.i(TAG, "Socket created")
+            Log.i(tag, "Socket created")
             socket.connect()
             manageConnectedSocket()
         }catch(e: IOException){
@@ -96,7 +92,7 @@ class ClientThread(private var context: Context,
                     Toast.LENGTH_LONG
                 ).show()
             }
-            Log.e(TAG, "Error during connection", e)
+            Log.e(tag, "Error during connection", e)
         }
     }
 }
