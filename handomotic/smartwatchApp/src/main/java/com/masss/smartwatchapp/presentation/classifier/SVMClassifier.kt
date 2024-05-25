@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.masss.smartwatchapp.R
 import java.nio.FloatBuffer
 
@@ -64,9 +65,10 @@ class SVMClassifier(private val context: Context) {
     }
 
     private fun sendKnownGestureBroadcast(prediction: String) {
-        val intent = Intent("com.masss.smartwatchapp.GESTURE_RECOGNIZED")
-        intent.putExtra("prediction", prediction)
-        context.sendBroadcast(intent)
+//        Log.i("SVM_CLASSIFIER", "Sending broadcast to SVMClassifierService")
+        val intent = Intent("SVMClassifier_RecognizedGesture")
+        intent.putExtra("Prediction", prediction)
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
     }
 
 

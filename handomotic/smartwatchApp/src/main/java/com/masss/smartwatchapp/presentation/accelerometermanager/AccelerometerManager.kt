@@ -3,7 +3,6 @@ package com.masss.smartwatchapp.presentation.accelerometermanager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import com.masss.smartwatchapp.presentation.classifier.FeatureExtractor
 import java.util.LinkedList
 

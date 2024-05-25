@@ -36,13 +36,18 @@ class UIManager(
 
     fun setupMainButton(
         missingRequiredPermissionsView: Boolean,
+        appWasRunningWhenResumed: Boolean
     ) {
         val mainButton: Button = activity.findViewById(R.id.mainButton)
 
         if (missingRequiredPermissionsView)            // graying out the button to make it look disabled
             mainButton.background = ContextCompat.getDrawable(activity, R.drawable.power_disabled)
-        else                    // restoring the button to its main style (power on background)
-            mainButton.background = ContextCompat.getDrawable(activity, R.drawable.power_on)
+        else {                    // restoring the button to its main style
+            if (appWasRunningWhenResumed)           // if the app was running in the background, the button should be displayed as power off when resumed
+                mainButton.background = ContextCompat.getDrawable(activity, R.drawable.power_off)
+            else
+                mainButton.background = ContextCompat.getDrawable(activity, R.drawable.power_on)
+        }
     }
 
     fun setupMainButtonOnClickListener(appIsRecording: Boolean, missingRequiredPermissionsView: Boolean) {
@@ -119,7 +124,7 @@ class UIManager(
     }
 
     @SuppressLint("InflateParams")
-    fun showGestureRecognizedScreen(recognizedGesture: String, btBeaconManager: BTBeaconManager, knownBeacons: List<Beacon>?) {
+    fun showGestureRecognizedScreen(recognizedGesture: String, btBeaconManager: BTBeaconManager, knownBeacons: List<Beacon>?, durationInMillis: Long) {
         val inflater = activity.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
         val popupView = inflater.inflate(R.layout.popup_gesture_recognized, null)
 
@@ -153,7 +158,7 @@ class UIManager(
         }
 
         val vibrator = activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        val vibrationEffect = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE)
+        val vibrationEffect = VibrationEffect.createOneShot(durationInMillis, VibrationEffect.DEFAULT_AMPLITUDE)
         vibrator.vibrate(vibrationEffect)
 
         popupWindow.showAtLocation(popupView, Gravity.CENTER, 0, 0)
@@ -178,6 +183,12 @@ class UIManager(
             override fun onAnimationRepeat(animation: Animator) {}
         })
         fadeOut.start()
+    }
+
+    fun notifyGestureRecognizedOnAppBackground(durationInMillis: Long) {
+        val vibrator = activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        val vibrationEffect = VibrationEffect.createOneShot(durationInMillis, VibrationEffect.DEFAULT_AMPLITUDE)
+        vibrator.vibrate(vibrationEffect)
     }
 
     private fun toggleMainButtonBackground(button: Button, appIsRecording: Boolean) {
