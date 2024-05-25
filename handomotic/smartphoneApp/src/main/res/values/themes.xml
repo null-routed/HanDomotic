@@ -4,6 +4,7 @@
     <style name="Theme.HanDomotic" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="android:statusBarColor">@color/darkgreen_700</item>
         <item name="android:textColorPrimary">@color/white</item>
+        <!--item name="android:textColor">@color/black</item-->
         <item name="colorPrimary">@color/lightgreen_500</item>
         <item name="colorPrimaryVariant">@color/darkgreen_700</item>
         <item name="colorSecondary">@color/teal_200</item>
