@@ -85,6 +85,8 @@ class UIManager(
         whereAmIButton.setOnClickListener {
             val closeBTBeacons = btBeaconManager.getBeacons()       // getting close beacons
 
+            Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ", "))
+
             if (!knownBeacons.isNullOrEmpty()) {                // some known beacons have been registered
                 if (closeBTBeacons.isNotEmpty()) {              // some beacons are close by
                     val closestBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
@@ -100,6 +102,8 @@ class UIManager(
     }
 
     private fun getCurrentRoom(closeBTBeacons: MutableMap<String, Beacon>, knownBeacons: List<Beacon>?): String? {
+        Log.i("BEACONS_SCAN_WATCH", "closeBTBeacons: $closeBTBeacons")
+
         if (knownBeacons.isNullOrEmpty() || closeBTBeacons.isEmpty())
             return null
 
@@ -112,7 +116,7 @@ class UIManager(
         closeBTBeacons.clear()
         closeBTBeacons.putAll(sortedEntries.associate { it.toPair() })
 
-        Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ","))
+        Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ", "))
 
         for (beacon in closeBTBeacons.values) {
             knownBeaconsMap[beacon.address]?.let {
@@ -141,10 +145,12 @@ class UIManager(
 
         // get close beacons. if no known beacon is close by, the gesture is useless, it doesn't activate anything
         val closeBTBeacons = btBeaconManager.getBeacons()
-        val closestBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
+
+        val closestKnownBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
+
         val popupMainView: LinearLayout = popupView.findViewById(R.id.popup_main_parent)
         val messageTextView: TextView = popupView.findViewById(R.id.gesture_recognized_text)
-        if (closestBeaconLocation.isNullOrEmpty()) {
+        if (closestKnownBeaconLocation.isNullOrEmpty()) {
             popupMainView.setBackgroundColor(ContextCompat.getColor(activity, android.R.color.holo_red_light))
             messageTextView.text = activity.getString(R.string.no_known_beacons_are_near_you)
         } else {
@@ -153,7 +159,7 @@ class UIManager(
                 activity.getString(
                     R.string.gesture_in_room,
                     activity.getString(R.string.gesture_recognized, recognizedGesture),
-                    closestBeaconLocation
+                    closestKnownBeaconLocation
                 )
         }
 
@@ -185,7 +191,12 @@ class UIManager(
         fadeOut.start()
     }
 
-    fun notifyGestureRecognizedOnAppBackground(durationInMillis: Long) {
+    fun notifyGestureRecognizedOnAppBackground(btBeaconManager: BTBeaconManager, knownBeacons: List<Beacon>?, durationInMillis: Long) {
+        val closeBTBeacons = btBeaconManager.getBeacons()
+        Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ", "))
+
+        val closestKnownBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
+
         val vibrator = activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         val vibrationEffect = VibrationEffect.createOneShot(durationInMillis, VibrationEffect.DEFAULT_AMPLITUDE)
         vibrator.vibrate(vibrationEffect)

@@ -11,7 +11,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
-import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import com.masss.handomotic.models.Beacon
 import com.masss.handomotic.viewmodels.ConfigurationViewModel
@@ -35,6 +34,9 @@ class ServerSocket(
     private lateinit var socket: BluetoothSocket
     private lateinit var inputStream: InputStream
 
+    @Volatile
+    private var running = false
+
     private fun handleReceivedData(jsonString: String) {
         try {
             configurationViewModel.flushBeacons()
@@ -45,9 +47,9 @@ class ServerSocket(
 
             val beaconsAsStr = beacons.joinToString(separator = ",")
             Log.i("ReceiveThread", beaconsAsStr)
-            // Update the configuration file with the changes
+
             // notify main activity to update known beacons
-            val beaconUpdateIntent = Intent("com.masss.smartwatchapp.BEACON_UPDATE")
+            val beaconUpdateIntent = Intent("CompanionApp_ReceivedBeaconUpdate")
             context.sendBroadcast(beaconUpdateIntent)
         } catch (e: Exception) {
             Log.e("ReceiveThread", "Error handling received data", e)
@@ -72,6 +74,8 @@ class ServerSocket(
     }
 
     override fun run() {
+        Log.i("SERVER_SOCKET", "Thread started. Listening for beacon updates...")
+
         // Obtaining the bluetooth adapter
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager?
         if(manager != null){
@@ -95,7 +99,7 @@ class ServerSocket(
 
             serverSocket = adapter.listenUsingRfcommWithServiceRecord("BeaconUpdatesFromCompanionApp", uuid)
 
-            while(true) {
+            while(running) {
                 Log.i("THREAD", "Thread is blocked waiting for a connection")
                 // This will block until a connection is established
                 socket = serverSocket.accept()
@@ -107,11 +111,22 @@ class ServerSocket(
                 receiveData()
 
                 socket.close()
-
-                // TODO: EXIT CONDITION
             }
         } catch (e: IOException) {
-            e.printStackTrace()
+            if (running)
+                Log.e("SERVER_SOCKET", "Error accepting connection", e)
+            else
+                Log.i("SERVER_SOCKET", "Thread stopped")
         }
     }
+
+    fun stopServer() {
+        running = false
+        try {
+            serverSocket.close()
+        } catch (e: IOException) {
+            Log.e("SERVER_SOCKET", "Error closing server socket", e)
+        }
+    }
+
 }

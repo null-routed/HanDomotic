@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -23,11 +24,11 @@ import com.masss.handomotic.BTBeaconManager
 import com.masss.handomotic.models.Beacon
 import com.masss.handomotic.viewmodels.ConfigurationViewModel
 import com.masss.smartwatchapp.presentation.accelerometermanager.AccelerometerManager
+import com.masss.smartwatchapp.presentation.btmanagement.BTBeaconManagerService
 import com.masss.smartwatchapp.presentation.btsocket.ServerSocket
 import com.masss.smartwatchapp.presentation.classifier.SVMClassifierService
 import com.masss.smartwatchapp.presentation.utilities.PermissionHandler
 import com.masss.smartwatchapp.presentation.utilities.UIManager
-import kotlinx.coroutines.*
 import java.util.UUID
 
 
@@ -35,13 +36,12 @@ class MainActivity : AppCompatActivity() {
 
     private val configurationViewModel: ConfigurationViewModel by viewModels()
 
-    private val LOG_TAG: String = "HanDomotic"
+    private val LOG_TAG = "MAIN_ACTIVITY"
 
     // Tracker for the app state
     private var appIsRecording: Boolean = false
     private lateinit var permissionHandler: PermissionHandler
     private lateinit var uiManager: UIManager
-
     private var firstAppLaunch: Boolean = true
 
     object AppLifecycleManager {
@@ -67,9 +67,11 @@ class MainActivity : AppCompatActivity() {
 
     // CLASSIFIER
     private lateinit var svmClassifier: SVMClassifier
+    private var isSVMClassifierRegistered: Boolean = false
 
     // ACCELEROMETER MANAGER
     private lateinit var accelerometerManager: AccelerometerManager
+    private var isAccelerometerManagerRegistered: Boolean = false
 
     // BT MANAGEMENT AND SCANNING
     private lateinit var btBeaconManager: BTBeaconManager
@@ -77,16 +79,9 @@ class MainActivity : AppCompatActivity() {
     private var serverSocketUUID: UUID = UUID.fromString("bffdf9d2-048d-45cb-b621-3025760dc306")
     private lateinit var beaconsUpdateThread: ServerSocket
     private var isBeaconsUpdateReceiverRegistered: Boolean = false
+    private var isBeaconThreadRunning: Boolean = false
 
-    // TEST
-    private val handler = Handler()
-    private val runnable = object : Runnable {
-        override fun run() {
-            Log.d("MAIN_ACTIVITY", "Main activity is running")
-            handler.postDelayed(this, 3000)
-        }
-    }
-
+    private lateinit var sharedPreferences: SharedPreferences
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,81 +100,99 @@ class MainActivity : AppCompatActivity() {
         // initializing the accelerometer manager
         accelerometerManager = AccelerometerManager(this)
 
+        Log.i(LOG_TAG, "onCreate() was called. First app launch? $firstAppLaunch, appIsRecording = $appIsRecording")
+
+        permissionHandler = PermissionHandler(this)
+
+        sharedPreferences = getSharedPreferences("com.masss.smartwatchapp", Context.MODE_PRIVATE)
+
         // initializing the server socket for beacon updates
         beaconsUpdateThread = ServerSocket(this, serverSocketUUID, configurationViewModel)
-
-        handler.post(runnable)
 
         // permissions are requested in onResume() at first app launch
     }
 
+    private fun updateSharedPreferences(appIsRecordingValue: Boolean, firstAppLaunchValue: Boolean) {
+        with(sharedPreferences.edit()) {
+            putBoolean("appIsRecording", appIsRecordingValue)
+            putBoolean("firstAppLaunch", firstAppLaunchValue)
+            apply()
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        Log.i(LOG_TAG, "onSaveInstanceState() was called: appIsRecording = $appIsRecording, firstAppLaunch = $firstAppLaunch")
+        updateSharedPreferences(appIsRecording, firstAppLaunch)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        updateSharedPreferences(false, true)
+        unregisterReceivers()
+        stopForegroundServices()
+        Log.i(LOG_TAG, "onDestroy() was called")
+    }
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    override fun onResume() {      // gets called after onCreate() and every time the app is back to foreground
+    override fun onResume() {
         super.onResume()
 
-        Log.i("MAIN_ACTIVITY", "onResume() was called. First app launch? $firstAppLaunch")
+        appIsRecording = sharedPreferences.getBoolean("appIsRecording", false)
+        firstAppLaunch = sharedPreferences.getBoolean("firstAppLaunch", true)
 
-        if (firstAppLaunch) {     // first app launch, just request permissions and call the appropriate functions
-            firstAppLaunch = false
-            permissionHandler = PermissionHandler(this)     // requesting permissions
-            if (!permissionHandler.requestPermissionsAndCheck())
-                onPermissionsDenied()
-            else
-                onAllPermissionsGranted()
+        Log.d(LOG_TAG, "onResume() was called: firstAppLaunch = $firstAppLaunch, appIsRecording = $appIsRecording")
+
+        if (firstAppLaunch)
+            handleFirstAppLaunch()      // First app launch ever or launch after destruction
+        else
+            handleSubsequentLaunches()      // Subsequent launches from background to foreground without destruction
+    }
+
+    private fun handleFirstAppLaunch() {
+        Log.i(LOG_TAG, "First app launch detected.")
+        firstAppLaunch = false
+        if (!permissionHandler.requestPermissionsAndCheck()) {
+            onPermissionsDenied()
         } else {
-            if (permissionHandler.arePermissionsGranted()) {
-                uiManager.toggleSettingsNavigationUI(visible = false)         // invisible if all permissions are granted
-                uiManager.setupWhereAmIButton(missingRequiredPermissionsView = false, btBeaconManager, knownBeacons)
-
-                if (appIsRecording) {
-                    uiManager.setupMainButton(missingRequiredPermissionsView = false, appWasRunningWhenResumed = true)
-                    uiManager.setupMainButtonOnClickListener(appIsRecording = true, missingRequiredPermissionsView = false)
-                } else {
-                    uiManager.setupMainButton(missingRequiredPermissionsView = false, appWasRunningWhenResumed = false)
-                    uiManager.setupMainButtonOnClickListener(appIsRecording = false, missingRequiredPermissionsView = false)
-                }
-            } else
-                Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_SHORT).show()
+            onAllPermissionsGranted(true)
         }
+    }
 
-//        if (permissionHandler.arePermissionsGranted()) {
-//            // making text and button to go to settings invisible if when coming back all the permissions have been granted
-//            uiManager.toggleSettingsNavigationUI(false)
-//
-//            // setup whereAmIButton for sure since all permissions are granted if here
-//            uiManager.setupWhereAmIButton(false, btBeaconManager, knownBeacons)
-//
-//            // restoring main button's style and behavior if it was disabled because of some missing permissions
-//            if (!appIsRecording) {
-//                uiManager.setupMainButton(false)
-//                uiManager.setupMainButtonOnClickListener(appIsRecording, false)
-//            }
-//
-//            // Registering accelerometer receiver
-//            registerReceiver(accelerometerManager.accelerometerReceiver, IntentFilter("AccelerometerData"), RECEIVER_NOT_EXPORTED)
-//
-//            // Registering SVM BroadcastReceiver
-//            svmClassifier.registerReceiver()
-//
-//            //Registering known gesture receiver
-////            registerReceiver(knownGestureReceiver, IntentFilter("SVMClassifierService_RecognizedGesture"), RECEIVER_NOT_EXPORTED)
-//            val gestureReceiverFilter = IntentFilter("SVMClassifierService_RecognizedGesture")
-//            LocalBroadcastManager.getInstance(this).registerReceiver(knownGestureReceiver, gestureReceiverFilter)
-//        } else
-//            Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_SHORT).show()
+    private fun handleSubsequentLaunches() {
+        Log.i(LOG_TAG, "Subsequent app launch detected.")
+        if (permissionHandler.arePermissionsGranted()) {
+            onAllPermissionsGranted(false)
+
+            uiManager.toggleSettingsNavigationUI(visible = false)
+            uiManager.setupWhereAmIButton(missingRequiredPermissionsView = false, btBeaconManager, knownBeacons)
+            if (appIsRecording) {
+                uiManager.setupMainButton(missingRequiredPermissionsView = false, appWasRunningWhenResumed = true)
+                uiManager.setupMainButtonOnClickListener(appIsRecording = true, missingRequiredPermissionsView = false)
+            } else {
+                uiManager.setupMainButton(missingRequiredPermissionsView = false, appWasRunningWhenResumed = false)
+                uiManager.setupMainButtonOnClickListener(appIsRecording = false, missingRequiredPermissionsView = false)
+            }
+        } else {
+            Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun registerReceivers() {
-        Log.i("MAIN_ACTIVITY", "registerReceivers() was called. Registering receivers...")
-        if (::accelerometerManager.isInitialized)
+        Log.i(LOG_TAG, "registerReceivers() was called. Registering receivers...")
+        if (::accelerometerManager.isInitialized && !isAccelerometerManagerRegistered) {
             registerReceiver(
                 accelerometerManager.accelerometerReceiver,
                 IntentFilter("AccelerometerData"),
                 RECEIVER_NOT_EXPORTED
             )
+            isAccelerometerManagerRegistered = true
+        }
 
-        if (::svmClassifier.isInitialized)
+        if (::svmClassifier.isInitialized && !isSVMClassifierRegistered) {
             svmClassifier.registerReceiver()
+            isSVMClassifierRegistered = true
+        }
 
         if (!isGestureReceiverRegistered) {
             LocalBroadcastManager.getInstance(this).registerReceiver(
@@ -190,7 +203,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (!isBeaconsUpdateReceiverRegistered) {
-            val beaconUpdatesFilter = IntentFilter("com.masss.smartwatchapp.BEACON_UPDATE")
+            val beaconUpdatesFilter = IntentFilter("CompanionApp_ReceivedBeaconUpdate")
             registerReceiver(beaconsUpdateReceiver, beaconUpdatesFilter, RECEIVER_NOT_EXPORTED)
             isBeaconsUpdateReceiverRegistered = true
         }
@@ -209,29 +222,47 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (permissionHandler.onRequestPermissionsResult(requestCode, permissions, grantResults))
-            onAllPermissionsGranted()
+            onAllPermissionsGranted(true)
         else
             onPermissionsDenied()
     }
 
-    private fun onAllPermissionsGranted() {
+    override fun onPause() {
+        super.onPause()
+
+        if (beaconsUpdateThread.isAlive && isBeaconThreadRunning)
+            beaconsUpdateThread.stopServer()
+    }
+
+    private fun onAllPermissionsGranted(firstLaunch: Boolean) {
         // starting BT beacon scanning for nearby beacons
         btBeaconManager.startScanning()
 
-        Log.i("MAIN_ACTIVITY", "All permissions have been granted")
+        Log.i(LOG_TAG, "All permissions have been granted")
 
         // initializing the list of known beacons from file on device persistent memory
         configurationViewModel.initialize(this)
         knownBeacons = configurationViewModel.getBeacons()
-        Log.i("MAIN_ACTIVITY", "Found ${knownBeacons.size} known beacons")
+        Log.i(LOG_TAG, "Found ${knownBeacons.size} known beacons")
 
         // setting up onclick listeners on activity creation for main and whereAmI buttons for the first time
-        uiManager.setupMainButton(missingRequiredPermissionsView = false, appWasRunningWhenResumed = false)
-        uiManager.setupMainButtonOnClickListener(appIsRecording = false, missingRequiredPermissionsView = false)
-        uiManager.setupWhereAmIButton(missingRequiredPermissionsView = false, btBeaconManager, knownBeacons)
+        if (firstLaunch){
+            uiManager.setupMainButton(missingRequiredPermissionsView = false, appWasRunningWhenResumed = false)
+            uiManager.setupMainButtonOnClickListener(appIsRecording = false, missingRequiredPermissionsView = false)
+            uiManager.setupWhereAmIButton(missingRequiredPermissionsView = false, btBeaconManager, knownBeacons)
+        }
 
         // Start listening for config updates from companion app
-        beaconsUpdateThread.start()
+        if (!isBeaconsUpdateReceiverRegistered) {
+            val beaconUpdatesFilter = IntentFilter("BeaconUpdatesFromCompanionApp")
+            registerReceiver(beaconsUpdateReceiver, beaconUpdatesFilter, RECEIVER_NOT_EXPORTED)
+            isBeaconsUpdateReceiverRegistered = true
+        }
+
+        if (!isBeaconThreadRunning) {
+            beaconsUpdateThread.start()
+            isBeaconThreadRunning = true
+        }
     }
 
     private val knownGestureReceiver = object : BroadcastReceiver() {
@@ -243,11 +274,11 @@ class MainActivity : AppCompatActivity() {
                 Log.i(LOG_TAG, "Received gesture from SVMClassifierService: $recognizedGesture")
 
                 if (AppLifecycleManager.isAppInForeground()) {
-                    Log.i("MAIN_ACTIVITY", "Recognized gesture: $recognizedGesture in foreground")
+                    Log.i(LOG_TAG, "Recognized gesture: $recognizedGesture in foreground")
                     uiManager.showGestureRecognizedScreen(recognizedGesture, btBeaconManager, knownBeacons, 500)
                 } else {
-                    Log.i("MAIN_ACTIVITY", "Recognized gesture: $recognizedGesture in background")
-                    uiManager.notifyGestureRecognizedOnAppBackground(1000)
+                    Log.i(LOG_TAG, "Recognized gesture: $recognizedGesture in background")
+                    uiManager.notifyGestureRecognizedOnAppBackground(btBeaconManager, knownBeacons, 1000)
                 }
 
             }
@@ -276,38 +307,19 @@ class MainActivity : AppCompatActivity() {
     private fun startAppServices() {
         // enable accelerometer data gathering
         appIsRecording = true
-        Log.i("MAIN_ACTIVITY", "Starting app services, app is recording")
+        Log.i(LOG_TAG, "Starting app services, app is recording")
 
         Toast.makeText(this, "Gesture recognition is active", Toast.LENGTH_SHORT).show()
-//        val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
-//        startService(accelRecordingIntent)
 
         registerReceivers()
         startForegroundServices()
 
-        // Registering SVM BroadcastReceiver
-//        svmClassifier.registerReceiver()
-
-        // Registering beacon updates receiver
-//        val beaconUpdatesFilter = IntentFilter("com.masss.smartwatchapp.BEACON_UPDATE")
-//        registerReceiver(beaconsUpdateReceiver, beaconUpdatesFilter, RECEIVER_NOT_EXPORTED)
-
-        // Registering the gesture recognition broadcast receiver
-//        val gestureReceiverFilter = IntentFilter("SVMClassifierService_RecognizedGesture")
-//        registerReceiver(knownGestureReceiver, gestureReceiverFilter, RECEIVER_NOT_EXPORTED)
-
         uiManager.setupMainButton(missingRequiredPermissionsView = false, appWasRunningWhenResumed = false)
         uiManager.setupMainButtonOnClickListener(appIsRecording = true, missingRequiredPermissionsView = false)
-
-//        val accelerometerServiceIntent = Intent(this, AccelerometerManager::class.java)
-//        ContextCompat.startForegroundService(this, accelerometerServiceIntent)
-
-//        val classifierIntent = Intent(this, SVMClassifierService::class.java)
-//        ContextCompat.startForegroundService(this, classifierIntent)
     }
 
     private fun startForegroundServices() {         // starting the services that need to keep on running also when the app is in the background
-        Log.i("MAIN_ACTIVITY", "startForegroundServices() was called. Starting foreground services...")
+        Log.i(LOG_TAG, "startForegroundServices() was called. Starting foreground services...")
 
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
@@ -317,10 +329,13 @@ class MainActivity : AppCompatActivity() {
 
         val classifierIntent = Intent(this, SVMClassifierService::class.java)
         ContextCompat.startForegroundService(this, classifierIntent)
+
+        val btBeaconManagerIntent = Intent(this, BTBeaconManagerService::class.java)
+        ContextCompat.startForegroundService(this, btBeaconManagerIntent)
     }
 
     private fun stopForegroundServices() {
-        Log.i("MAIN_ACTIVITY", "stopForegroundServices() was called. Stopping foreground services...")
+        Log.i(LOG_TAG, "stopForegroundServices() was called. Stopping foreground services...")
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         stopService(accelRecordingIntent)
 
@@ -329,19 +344,29 @@ class MainActivity : AppCompatActivity() {
 
         val classifierIntent = Intent(this, SVMClassifierService::class.java)
         stopService(classifierIntent)
+
+        val btBeaconManagerIntent = Intent(this, BTBeaconManagerService::class.java)
+        stopService(btBeaconManagerIntent)
     }
 
     private fun unregisterReceivers() {
-        Log.i("MAIN_ACTIVITY", "unRegisterReceivers() was called. Unregistering receivers...")
+        Log.i(LOG_TAG, "unRegisterReceivers() was called. Unregistering receivers...")
 
-        if (::accelerometerManager.isInitialized)
+        if (::accelerometerManager.isInitialized && isAccelerometerManagerRegistered) {
             unregisterReceiver(accelerometerManager.accelerometerReceiver)
-        if (::svmClassifier.isInitialized)
+            isAccelerometerManagerRegistered = false
+        }
+
+        if (::svmClassifier.isInitialized && isSVMClassifierRegistered) {
             svmClassifier.unregisterReceiver()
+            isSVMClassifierRegistered = false
+        }
+
         if (isGestureReceiverRegistered) {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(knownGestureReceiver)
             isGestureReceiverRegistered = false
         }
+
         if (isBeaconsUpdateReceiverRegistered) {
             unregisterReceiver(beaconsUpdateReceiver)
             isBeaconsUpdateReceiverRegistered = false
@@ -363,7 +388,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onPermissionsDenied() {
-        Log.i("MAIN_ACTIVITY", "onPermissionsDenied() was called")
+        Log.i(LOG_TAG, "onPermissionsDenied() was called")
 
         knownBeacons = emptyList()
 
