@@ -7,10 +7,11 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import com.masss.handomotic.databinding.ScanActivityBinding
 import com.masss.handomotic.models.Beacon
 
-class ScanActivity : ComponentActivity() {
+class ScanActivity : AppCompatActivity() {
 
     private lateinit var beaconAdapter: BeaconsAdapter
     private lateinit var binding: ScanActivityBinding
@@ -24,9 +25,11 @@ class ScanActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        supportActionBar?.title = "Beacons pairing"
+
         binding = ScanActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.greeting.text = " Wake up, samurai! "
 
         val knownBeaconsList: List<Beacon> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableArrayListExtra("beacons", Beacon::class.java).orEmpty()
@@ -106,7 +109,7 @@ class ScanActivity : ComponentActivity() {
     private fun stopBeaconScan() {
         Log.i(TAG, "Stop scanning")
         binding.greeting.text = "Not scanning"
-        binding.scanningProgress.visibility = View.GONE
+        binding.scanningProgress.visibility = View.INVISIBLE
         beaconManager.stopScanning()
     }
 }

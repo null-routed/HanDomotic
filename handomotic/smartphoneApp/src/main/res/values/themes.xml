@@ -2,8 +2,9 @@
 <resources>
 
     <style name="Theme.HanDomotic" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="colorPrimary">@color/lightgreen_500</item>
+        <item name="colorPrimaryVariant">@color/darkgreen_700</item>
         <item name="colorSecondary">@color/teal_200</item>
         <item name="windowActionBar">true</item>
         <item name="windowNoTitle">false</item>
