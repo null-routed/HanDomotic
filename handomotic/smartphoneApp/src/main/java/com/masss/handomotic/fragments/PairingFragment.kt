@@ -90,11 +90,10 @@ class PairingFragment : Fragment() {
         val pairedDevice = configurationViewModel.getPairedDevice()
         if(pairedDevice == null) {
             watchName.visibility = View.GONE
-            noWatchesPaired.visibility = View.VISIBLE
+            noWatchesPaired.text = getString(R.string.noWatches)
         } else{
-            noWatchesPaired.visibility = View.GONE
-            val msg = getString(R.string.pairedWatchMsg, pairedDevice.deviceName)
-            watchName.text = msg
+            noWatchesPaired.text = getString(R.string.pairedWatchMsg)
+            watchName.text = pairedDevice.deviceName
             watchName.visibility = View.VISIBLE
         }
         watchPairingButton.setOnClickListener {
