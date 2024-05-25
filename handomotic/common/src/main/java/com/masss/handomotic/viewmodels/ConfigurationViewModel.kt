@@ -13,6 +13,11 @@ class ConfigurationViewModel : ViewModel() {
     private val _pairedDevice = MutableLiveData<PairedDevice?>()
     fun initialize(context: Context) {
         val configuration = FileManager.readConfiguration(context)
+        if (configuration != null) {
+            if (configuration.pairedDevice?.deviceAddress?.isEmpty() == true) {
+                configuration.pairedDevice = null
+            }
+        }
         _beacons.value = configuration?.beacons?.toMutableList() ?: mutableListOf()
         _pairedDevice.value = configuration?.pairedDevice
     }
