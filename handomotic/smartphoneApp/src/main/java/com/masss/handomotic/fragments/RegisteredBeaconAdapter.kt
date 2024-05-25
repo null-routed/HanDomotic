@@ -3,7 +3,7 @@ package com.masss.handomotic.fragments
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
+import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.masss.handomotic.R
@@ -15,7 +15,7 @@ class RegisteredBeaconAdapter(private var beacons: List<Beacon>, private val del
     inner class BeaconViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val macAddressTextView: TextView = view.findViewById(R.id.macAddressTextView)
         val roomNameTextView: TextView = view.findViewById(R.id.roomNameTextView)
-        val deleteImageView: ImageView = view.findViewById(R.id.deleteImageView)
+        val deleteImageView: Button = view.findViewById(R.id.deleteBeaconButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BeaconViewHolder {
