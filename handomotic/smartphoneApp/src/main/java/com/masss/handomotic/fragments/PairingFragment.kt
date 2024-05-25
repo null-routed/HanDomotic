@@ -57,12 +57,11 @@ class PairingFragment : Fragment() {
 
                    if(lastWatchName == ""){
                        watchName.visibility = View.GONE
-                       noWatchesPaired.visibility = View.VISIBLE
+                       noWatchesPaired.text = getString(R.string.noWatches)
                     } else {
-                        noWatchesPaired.visibility = View.GONE
-                        watchName.visibility = View.VISIBLE
-                        val msg = getString(R.string.pairedWatchMsg, lastWatchName)
-                        watchName.text = msg
+                       noWatchesPaired.text = getString(R.string.pairedWatchMsg)
+                       watchName.text = lastWatchName
+                       watchName.visibility = View.VISIBLE
 
                        // Writing to file
                        val pairedDevice = PairedDevice(lastWatchName, lastWatchAddress)
