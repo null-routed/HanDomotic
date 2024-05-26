@@ -18,6 +18,8 @@ import java.nio.FloatBuffer
 
 class SVMClassifier(private val context: Context) {
 
+    private val TAG = "SVM_CLASSIFIER"
+
     private var isReceiverRegister = false
 
     // TEST
@@ -88,7 +90,7 @@ class SVMClassifier(private val context: Context) {
 
                 // Printing on Log the results of classification SVM
                 if (prediction == "Circle" || prediction == "Clap")
-                    Log.i("CLASSIFIER_LOG", "Predicted: $prediction, with confidence: $confidence")
+                    Log.i(TAG, "Predicted: $prediction, with confidence: $confidence")
             }
         }
     }

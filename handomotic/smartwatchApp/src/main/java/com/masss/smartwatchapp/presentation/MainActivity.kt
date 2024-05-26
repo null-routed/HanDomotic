@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
 
     private val configurationViewModel: ConfigurationViewModel by viewModels()
 
-    private val LOG_TAG = "MAIN_ACTIVITY"
+    private val TAG = "MAIN_ACTIVITY"
 
     // Tracker for the app state
     private var appIsRecording: Boolean = false
@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
         // initializing the accelerometer manager
         accelerometerManager = AccelerometerManager(this)
 
-        Log.i(LOG_TAG, "onCreate() was called. First app launch? $firstAppLaunch, appIsRecording = $appIsRecording")
+        Log.i(TAG, "onCreate() was called. First app launch? $firstAppLaunch, appIsRecording = $appIsRecording")
 
         permissionHandler = PermissionHandler(this)
 
@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        Log.i(LOG_TAG, "onSaveInstanceState() was called: appIsRecording = $appIsRecording, firstAppLaunch = $firstAppLaunch")
+        Log.i(TAG, "onSaveInstanceState() was called: appIsRecording = $appIsRecording, firstAppLaunch = $firstAppLaunch")
         updateSharedPreferences(appIsRecording, firstAppLaunch)
         super.onSaveInstanceState(outState)
     }
@@ -131,7 +131,7 @@ class MainActivity : AppCompatActivity() {
         updateSharedPreferences(false, true)
         unregisterReceivers()
         stopForegroundServices()
-        Log.i(LOG_TAG, "onDestroy() was called")
+        Log.i(TAG, "onDestroy() was called")
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -141,7 +141,7 @@ class MainActivity : AppCompatActivity() {
         appIsRecording = sharedPreferences.getBoolean("appIsRecording", false)
         firstAppLaunch = sharedPreferences.getBoolean("firstAppLaunch", true)
 
-        Log.d(LOG_TAG, "onResume() was called: firstAppLaunch = $firstAppLaunch, appIsRecording = $appIsRecording")
+        Log.d(TAG, "onResume() was called: firstAppLaunch = $firstAppLaunch, appIsRecording = $appIsRecording")
 
         if (firstAppLaunch)
             handleFirstAppLaunch()      // First app launch ever or launch after destruction
@@ -150,7 +150,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleFirstAppLaunch() {
-        Log.i(LOG_TAG, "First app launch detected.")
+        Log.i(TAG, "First app launch detected.")
         firstAppLaunch = false
         if (!permissionHandler.requestPermissionsAndCheck()) {
             onPermissionsDenied()
@@ -160,7 +160,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleSubsequentLaunches() {
-        Log.i(LOG_TAG, "Subsequent app launch detected.")
+        Log.i(TAG, "Subsequent app launch detected.")
         if (permissionHandler.arePermissionsGranted()) {
             onAllPermissionsGranted(false)
 
@@ -179,7 +179,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun registerReceivers() {
-        Log.i(LOG_TAG, "registerReceivers() was called. Registering receivers...")
+        Log.i(TAG, "registerReceivers() was called. Registering receivers...")
         if (::accelerometerManager.isInitialized && !isAccelerometerManagerRegistered) {
             registerReceiver(
                 accelerometerManager.accelerometerReceiver,
@@ -238,12 +238,12 @@ class MainActivity : AppCompatActivity() {
         // starting BT beacon scanning for nearby beacons
         btBeaconManager.startScanning()
 
-        Log.i(LOG_TAG, "All permissions have been granted")
+        Log.i(TAG, "All permissions have been granted")
 
         // initializing the list of known beacons from file on device persistent memory
         configurationViewModel.initialize(this)
         knownBeacons = configurationViewModel.getBeacons()
-        Log.i(LOG_TAG, "Found ${knownBeacons.size} known beacons")
+        Log.i(TAG, "Found ${knownBeacons.size} known beacons")
 
         // setting up onclick listeners on activity creation for main and whereAmI buttons for the first time
         if (firstLaunch){
@@ -271,13 +271,13 @@ class MainActivity : AppCompatActivity() {
                 temporarilyStopKnownGestureReceiver()           // avoid receiving the following gestures for x seconds defined in 'delayGestureBroadcast'
 
                 val recognizedGesture = it.getStringExtra("ClassificationResult") ?: "No prediction"
-                Log.i(LOG_TAG, "Received gesture from SVMClassifierService: $recognizedGesture")
+                Log.i(TAG, "Received gesture from SVMClassifierService: $recognizedGesture")
 
                 if (AppLifecycleManager.isAppInForeground()) {
-                    Log.i(LOG_TAG, "Recognized gesture: $recognizedGesture in foreground")
+                    Log.i(TAG, "Recognized gesture: $recognizedGesture in foreground")
                     uiManager.showGestureRecognizedScreen(recognizedGesture, btBeaconManager, knownBeacons, 500)
                 } else {
-                    Log.i(LOG_TAG, "Recognized gesture: $recognizedGesture in background")
+                    Log.i(TAG, "Recognized gesture: $recognizedGesture in background")
                     uiManager.notifyGestureRecognizedOnAppBackground(btBeaconManager, knownBeacons, 1000)
                 }
 
@@ -307,7 +307,7 @@ class MainActivity : AppCompatActivity() {
     private fun startAppServices() {
         // enable accelerometer data gathering
         appIsRecording = true
-        Log.i(LOG_TAG, "Starting app services, app is recording")
+        Log.i(TAG, "Starting app services, app is recording")
 
         Toast.makeText(this, "Gesture recognition is active", Toast.LENGTH_SHORT).show()
 
@@ -319,7 +319,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startForegroundServices() {         // starting the services that need to keep on running also when the app is in the background
-        Log.i(LOG_TAG, "startForegroundServices() was called. Starting foreground services...")
+        Log.i(TAG, "startForegroundServices() was called. Starting foreground services...")
 
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         startService(accelRecordingIntent)
@@ -335,7 +335,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun stopForegroundServices() {
-        Log.i(LOG_TAG, "stopForegroundServices() was called. Stopping foreground services...")
+        Log.i(TAG, "stopForegroundServices() was called. Stopping foreground services...")
         val accelRecordingIntent = Intent(this, AccelerometerRecordingService::class.java)
         stopService(accelRecordingIntent)
 
@@ -350,7 +350,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun unregisterReceivers() {
-        Log.i(LOG_TAG, "unRegisterReceivers() was called. Unregistering receivers...")
+        Log.i(TAG, "unRegisterReceivers() was called. Unregistering receivers...")
 
         if (::accelerometerManager.isInitialized && isAccelerometerManagerRegistered) {
             unregisterReceiver(accelerometerManager.accelerometerReceiver)
@@ -376,7 +376,7 @@ class MainActivity : AppCompatActivity() {
     private fun stopAppServices() {
         // stop accelerometer data gathering
         appIsRecording = false
-        Log.i(LOG_TAG, "Stopping app services, setting appIsRecording to false")
+        Log.i(TAG, "Stopping app services, app is not recording")
 
         Toast.makeText(this, "Gesture recognition is off", Toast.LENGTH_SHORT).show()
 
@@ -388,7 +388,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onPermissionsDenied() {
-        Log.i(LOG_TAG, "onPermissionsDenied() was called")
+        Log.i(TAG, "onPermissionsDenied() was called")
 
         knownBeacons = emptyList()
 
