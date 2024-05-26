@@ -8,8 +8,8 @@ The hardware setup includes BLE beacons, an Android smartphone for configuration
 
 HanDomotic advances mobile and social sensing systems by providing an efficient and accurate solution for gesture-based home automation. Future work will aim to improve classification accuracy for complex gestures and add the necessary logic to control smart domotic devices.
 
-# Contributors
-Niccolò Mulè
-Cristiano Corsi
-Marco Imbelli Cai
-Lorenzo Ceccanti
+# Contributors:
+- Niccolò Mulè
+- Cristiano Corsi
+- Marco Imbelli Cai
+- Lorenzo Ceccanti
