@@ -1,20 +1,25 @@
 package com.masss.smartwatchapp.presentation.btmanagement
 
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 import com.masss.handomotic.BTBeaconManager
 import com.masss.smartwatchapp.R
+import com.masss.smartwatchapp.presentation.utilities.NotificationHelper
+
 
 class BTBeaconManagerService : Service() {
 
     private lateinit var beaconManager: BTBeaconManager
+
+    private val notificationHelper = NotificationHelper()
+    companion object {
+        private const val NOTIFICATION_ID = 3
+        private const val NOTIFICATION_CHANNEL_ID = "BT_BEACON_SCANNING_SERVICE_CHANNEL"
+        private const val NOTIFICATION_CHANNEL_NAME = "BT Beacon Scanning Service Channel"
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -24,23 +29,24 @@ class BTBeaconManagerService : Service() {
     }
 
     private fun startForegroundService() {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = "beacon_scanning_service_channel"
-
-        val channel = NotificationChannel(
-            channelId,
-            "Beacon Scanning Service",
+        val notificationChannel = notificationHelper.getNotificationChannelObject(
+            NOTIFICATION_CHANNEL_ID,
+            NOTIFICATION_CHANNEL_NAME,
             NotificationManager.IMPORTANCE_LOW
         )
-        notificationManager.createNotificationChannel(channel)
 
-        val notification: Notification = NotificationCompat.Builder(this, channelId)
-            .setContentTitle("Beacon Scanning")
-            .setContentText("Scanning for beacons in the background")
-            .setSmallIcon(R.drawable.handomotic_notification)
-            .build()
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(notificationChannel)
 
-        startForeground(1, notification)
+        val notification = notificationHelper.createNotification(
+            NOTIFICATION_CHANNEL_ID,
+            "BT Beacon Scanning Service",
+            "Scanning for Bluetooth beacons...",
+            R.drawable.handomotic_notification,
+            this
+        )
+
+        startForeground(NOTIFICATION_ID, notification)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

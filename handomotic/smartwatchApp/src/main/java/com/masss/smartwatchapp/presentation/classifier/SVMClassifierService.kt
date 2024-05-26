@@ -1,7 +1,6 @@
 package com.masss.smartwatchapp.presentation.classifier
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -10,20 +9,25 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
 import android.util.Log
-import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.masss.smartwatchapp.R
+import com.masss.smartwatchapp.presentation.utilities.NotificationHelper
 
 
 class SVMClassifierService: Service() {
 
+    private val TAG = "SVM_CLASSIFIER_SERVICE"
+
+    private var notificationHelper = NotificationHelper()
     companion object {
         private const val NOTIFICATION_ID = 2
+        private const val NOTIFICATION_CHANNEL_ID = "SVM_CLASSIFIER_SERVICE_CHANNEL"
+        private const val NOTIFICATION_CHANNEL_NAME = "SVM Classifier Service Channel"
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.i("SVMClassifierService", "SVMClassifierService has stopped.")
+        Log.i(TAG, "SVMClassifierService has stopped.")
     }
 
     override fun onCreate() {
@@ -32,17 +36,22 @@ class SVMClassifierService: Service() {
     }
 
     private fun createNotification(): Notification {
-        val notificationChannelId = "SVM_CLASSIFIER_SERVICE_CHANNEL"
-        val channel = NotificationChannel(notificationChannelId, "SVM Classifier Service Channel", NotificationManager.IMPORTANCE_LOW)
+        val notificationChannel = notificationHelper.getNotificationChannelObject(
+            NOTIFICATION_CHANNEL_ID,
+            NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_LOW
+        )
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(channel)
+        notificationManager.createNotificationChannel(notificationChannel)
 
-        return NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle("SVM Classifier Service")
-            .setContentText("Classifying...")
-            .setSmallIcon(R.drawable.handomotic_notification)
-            .build()
+        return notificationHelper.createNotification(
+            NOTIFICATION_CHANNEL_ID,
+            "SVM Classifier Service",
+            "The SVM Classifier is classifying...",
+            R.drawable.handomotic_notification,
+            this
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -60,7 +69,7 @@ class SVMClassifierService: Service() {
 
         val filter = IntentFilter("SVMClassifier_RecognizedGesture")
         LocalBroadcastManager.getInstance(this).registerReceiver(classifierReceiver, filter)
-        Log.i("SVMClassifierService", "SVMClassifierService has started.")
+        Log.i(TAG, "SVMClassifierService has started.")
 
         return START_STICKY
     }

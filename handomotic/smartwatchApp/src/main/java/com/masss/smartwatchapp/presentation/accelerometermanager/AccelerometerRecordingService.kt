@@ -1,7 +1,5 @@
 package com.masss.smartwatchapp.presentation.accelerometermanager
 
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
@@ -12,11 +10,20 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.IBinder
 import android.util.Log
-import androidx.core.app.NotificationCompat
 import com.masss.smartwatchapp.R
+import com.masss.smartwatchapp.presentation.utilities.NotificationHelper
 
 
 class AccelerometerRecordingService : Service(), SensorEventListener {
+
+    private val TAG = "ACCELEROMETER_RECORDING_SERVICE"
+
+    private var notificationHelper = NotificationHelper()
+    companion object {
+        private const val NOTIFICATION_ID = 1
+        private const val NOTIFICATION_CHANNEL_ID = "ACCELEROMETER_SERVICE_CHANNEL"
+        private const val NOTIFICATION_CHANNEL_NAME = "Accelerometer Service Channel"
+    }
 
     private lateinit var sensorManager: SensorManager
     private var accelerometerSensor: Sensor? = null
@@ -26,7 +33,7 @@ class AccelerometerRecordingService : Service(), SensorEventListener {
     private var lastZValue: Float = 0f
 
     override fun onCreate() {
-        Log.d("ACCELEROMETER_RECORDING_SERVICE", "AccelerometerRecordingService has started.")
+        Log.d(TAG, "AccelerometerRecordingService has started.")
         super.onCreate()
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -36,7 +43,7 @@ class AccelerometerRecordingService : Service(), SensorEventListener {
     }
 
     override fun onDestroy() {
-        Log.d("ACCELEROMETER_RECORDING_SERVICE", "AccelerometerRecordingService has stopped.")
+        Log.d(TAG, "AccelerometerRecordingService has stopped.")
         stopRecording()         // stop recording data before destroying the service
         super.onDestroy()
     }
@@ -55,24 +62,24 @@ class AccelerometerRecordingService : Service(), SensorEventListener {
     }
 
     private fun startForegroundService() {
-        val notificationChannelId = "ACCELEROMETER_SERVICE_CHANNEL"
-
-        val channel = NotificationChannel(
-            notificationChannelId,
-            "Accelerometer Service",
+        val notificationChannel = notificationHelper.getNotificationChannelObject(
+            NOTIFICATION_CHANNEL_ID,
+            NOTIFICATION_CHANNEL_NAME,
             NotificationManager.IMPORTANCE_LOW
         )
 
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        manager.createNotificationChannel(notificationChannel)
 
-        val notification: Notification = NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle("Accelerometer Service")
-            .setContentText("Recording accelerometer data")
-            .setSmallIcon(R.drawable.handomotic_notification)
-            .build()
+        val notification = notificationHelper.createNotification(
+            NOTIFICATION_CHANNEL_ID,
+            "Accelerometer Service",
+            "Recording accelerometer data...",
+            R.drawable.handomotic_notification,
+            this
+        )
 
-        startForeground(1, notification)
+        startForeground(NOTIFICATION_ID, notification)
     }
 
     // Stop recording accelerometer data
