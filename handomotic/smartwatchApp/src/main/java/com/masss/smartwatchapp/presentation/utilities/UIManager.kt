@@ -34,6 +34,8 @@ class UIManager(
 )
 {
 
+    private val TAG = "UI_MANAGER"
+
     fun setupMainButton(
         missingRequiredPermissionsView: Boolean,
         appWasRunningWhenResumed: Boolean
@@ -85,7 +87,7 @@ class UIManager(
         whereAmIButton.setOnClickListener {
             val closeBTBeacons = btBeaconManager.getBeacons()       // getting close beacons
 
-            Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ", "))
+            Log.i(TAG, "Close detected beacons: ${closeBTBeacons.values.joinToString(separator = ", ")}")
 
             if (!knownBeacons.isNullOrEmpty()) {                // some known beacons have been registered
                 if (closeBTBeacons.isNotEmpty()) {              // some beacons are close by
@@ -102,8 +104,6 @@ class UIManager(
     }
 
     private fun getCurrentRoom(closeBTBeacons: MutableMap<String, Beacon>, knownBeacons: List<Beacon>?): String? {
-        Log.i("BEACONS_SCAN_WATCH", "closeBTBeacons: $closeBTBeacons")
-
         if (knownBeacons.isNullOrEmpty() || closeBTBeacons.isEmpty())
             return null
 
@@ -116,14 +116,14 @@ class UIManager(
         closeBTBeacons.clear()
         closeBTBeacons.putAll(sortedEntries.associate { it.toPair() })
 
-        Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ", "))
-
         for (beacon in closeBTBeacons.values) {
             knownBeaconsMap[beacon.address]?.let {
+                Log.i(TAG, "Current room detected: ${it.name}")
                 return it.name
             }
         }
 
+        Log.i(TAG, "No room has been detected")
         return null
     }
 
@@ -193,23 +193,23 @@ class UIManager(
 
     fun notifyGestureRecognizedOnAppBackground(btBeaconManager: BTBeaconManager, knownBeacons: List<Beacon>?, durationInMillis: Long) {
         val closeBTBeacons = btBeaconManager.getBeacons()
-        Log.i("BEACONS_SCAN_WATCH", closeBTBeacons.values.joinToString(separator = ", "))
 
         val closestKnownBeaconLocation = getCurrentRoom(closeBTBeacons, knownBeacons)
 
-        val vibrator = activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        val vibrationEffect = VibrationEffect.createOneShot(durationInMillis, VibrationEffect.DEFAULT_AMPLITUDE)
-        vibrator.vibrate(vibrationEffect)
+        if (!closestKnownBeaconLocation.isNullOrEmpty()) {
+            val vibrator = activity.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            val vibrationEffect =
+                VibrationEffect.createOneShot(durationInMillis, VibrationEffect.DEFAULT_AMPLITUDE)
+            vibrator.vibrate(vibrationEffect)
+        }
     }
 
     private fun toggleMainButtonBackground(button: Button, appIsRecording: Boolean) {
-        if (appIsRecording) {               // this works, i dont know why :)
+        if (appIsRecording)
             button.background = ContextCompat.getDrawable(activity, R.drawable.power_on)
-            Log.d("UIManager", "appIsRecording: $appIsRecording, Button background toggled to off")
-        } else {
+        else
             button.background = ContextCompat.getDrawable(activity, R.drawable.power_off)
-            Log.d("UIManager", "appIsRecording: $appIsRecording, Button background toggled to on")
-        }
+
     }
 
     fun toggleSettingsNavigationUI(visible: Boolean) {
