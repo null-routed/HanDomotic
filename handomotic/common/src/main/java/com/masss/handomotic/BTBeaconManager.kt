@@ -44,7 +44,6 @@
          * @return the list of beacons sorted by rssi.
          */
         fun getBeacons(): MutableMap<String, Beacon> {
-            //return beaconsList.sortedBy { it.rssi * -1 }
             return beaconsMap
         }
 
