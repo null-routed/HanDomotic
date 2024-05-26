@@ -38,12 +38,12 @@ class MainActivity : AppCompatActivity() {
 
     private val TAG = "MAIN_ACTIVITY"
 
-    // Tracker for the app state
+    // APP STATE MANAGEMENT
     private var appIsRecording: Boolean = false
     private lateinit var permissionHandler: PermissionHandler
     private lateinit var uiManager: UIManager
+    private lateinit var sharedPreferences: SharedPreferences
     private var firstAppLaunch: Boolean = true
-
     object AppLifecycleManager {
         private var foregroundActivityCount = 0
 
@@ -65,11 +65,11 @@ class MainActivity : AppCompatActivity() {
     private val delayGestureBroadcast = 5000L       // seconds delay between two consecutive gesture recognitions
     private var isGestureReceiverRegistered: Boolean = false
 
-    // CLASSIFIER
+    // CLASSIFIER MANAGEMENT
     private lateinit var svmClassifier: SVMClassifier
     private var isSVMClassifierRegistered: Boolean = false
 
-    // ACCELEROMETER MANAGER
+    // ACCELEROMETER MANAGEMENT
     private lateinit var accelerometerManager: AccelerometerManager
     private var isAccelerometerManagerRegistered: Boolean = false
 
@@ -80,8 +80,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var beaconsUpdateThread: ServerSocket
     private var isBeaconsUpdateReceiverRegistered: Boolean = false
     private var isBeaconThreadRunning: Boolean = false
-
-    private lateinit var sharedPreferences: SharedPreferences
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -152,11 +150,10 @@ class MainActivity : AppCompatActivity() {
     private fun handleFirstAppLaunch() {
         Log.i(TAG, "First app launch detected.")
         firstAppLaunch = false
-        if (!permissionHandler.requestPermissionsAndCheck()) {
+        if (!permissionHandler.requestPermissionsAndCheck())
             onPermissionsDenied()
-        } else {
+        else
             onAllPermissionsGranted(true)
-        }
     }
 
     private fun handleSubsequentLaunches() {
@@ -173,9 +170,8 @@ class MainActivity : AppCompatActivity() {
                 uiManager.setupMainButton(missingRequiredPermissionsView = false, appWasRunningWhenResumed = false)
                 uiManager.setupMainButtonOnClickListener(appIsRecording = false, missingRequiredPermissionsView = false)
             }
-        } else {
+        } else
             Toast.makeText(this, "Some needed permissions still have to be granted", Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun registerReceivers() {
