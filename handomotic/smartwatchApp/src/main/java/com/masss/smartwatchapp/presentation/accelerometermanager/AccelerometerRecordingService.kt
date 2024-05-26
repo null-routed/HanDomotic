@@ -56,7 +56,7 @@ class AccelerometerRecordingService : Service(), SensorEventListener {
             sensorManager.registerListener(
                 this,
                 sensor,
-                SensorManager.SENSOR_DELAY_GAME       // how often the sensor events are delivered (10 samples per second)
+                SensorManager.SENSOR_DELAY_GAME       // how often the sensor events are delivered
             )
         }
     }
