@@ -5,6 +5,8 @@
     <color name="purple_700">#FF3700B3</color>
     <color name="lightgreen_500">#43A047</color>
     <color name="darkgreen_700">#1B5E20</color>
+    <color name="lighyellow">#FFF8E1</color>
+    <color name="lightgray">#5C5F61</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
     <color name="light_teal">#E3F2FD</color>
