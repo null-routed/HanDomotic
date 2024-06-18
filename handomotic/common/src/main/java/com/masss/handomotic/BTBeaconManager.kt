@@ -59,6 +59,7 @@
          * Adds a [beacon] to the list.
          */
         private fun addBeacon(beacon: IBeaconDevice) {
+            if(beacon.uniqueId == null) return
             val newBeacon = Beacon(beacon.uniqueId, beacon.address, null, beacon.rssi.toDouble())
             beaconsMap[newBeacon.address] = newBeacon
         }
@@ -116,9 +117,9 @@
         }
 
         fun startScanning() {
-            // Empty the list of beacons
+            if(isScanning()) return
             beaconsMap.clear()
-
+            Log.i(tag, "Scanning started")
             //Connect to scanning service and start scanning when ready
             proximityManager!!.connect(OnServiceReadyListener {
                 //Check if proximity manager is already scanning
@@ -134,6 +135,8 @@
         }
 
         fun stopScanning() {
+            Log.i(tag, "Scanning stop")
+
             if (proximityManager!!.isScanning) {
                 proximityManager!!.stopScanning()
                 Toast.makeText(context, "Scanning stopped", Toast.LENGTH_SHORT).show()
